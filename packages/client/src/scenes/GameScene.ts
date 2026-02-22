@@ -7,14 +7,12 @@ import { TankSprite } from '../entities/TankSprite.js';
 import { ProjectileSprite } from '../entities/ProjectileSprite.js';
 import { FlagSprite } from '../entities/FlagSprite.js';
 
-// Colors matching the CSS custom properties
-const COLOR_BG_DARK = 0x0a0a1a;
-const COLOR_BG_MID = 0x1a1a2e;
-const COLOR_GRID = 0x151530;
-const COLOR_BORDER = 0x333355;
-const COLOR_CENTER_LINE = 0x222244;
-const COLOR_RED_ZONE = 0xff4444;
-const COLOR_BLUE_ZONE = 0x4488ff;
+// Warm paper / pencil-box palette
+const COLOR_GRID = 0xc8bfaa;
+const COLOR_BORDER = 0x2c2c2c;
+const COLOR_CENTER_LINE = 0x8a7f6e;
+const COLOR_RED_ZONE = 0xb94040;
+const COLOR_BLUE_ZONE = 0x4a6fa5;
 
 export class GameScene extends Phaser.Scene {
   private socketManager!: SocketManager;
@@ -71,12 +69,12 @@ export class GameScene extends Phaser.Scene {
     // Handle flag capture events
     this.socketManager.onFlagCapture((data) => {
       const color = data.team === 'red'
-        ? 'var(--red-team, #ff4444)'
-        : 'var(--blue-team, #4488ff)';
+        ? 'var(--red-team, #b94040)'
+        : 'var(--blue-team, #4a6fa5)';
       const teamName = data.team === 'red' ? 'RED' : 'BLUE';
       this.hudManager.showAnnouncement(
         `${teamName} TEAM CAPTURES THE FLAG!`,
-        data.team === 'red' ? '#ff4444' : '#4488ff'
+        data.team === 'red' ? '#b94040' : '#4a6fa5'
       );
     });
   }
@@ -84,8 +82,8 @@ export class GameScene extends Phaser.Scene {
   private drawArena(): void {
     const bg = this.add.graphics();
 
-    // Subtle grid pattern
-    bg.lineStyle(1, COLOR_GRID, 0.4);
+    // Graph-paper grid lines
+    bg.lineStyle(1, COLOR_GRID, 0.5);
     const gridSize = 40;
     for (let x = 0; x <= ARENA_WIDTH; x += gridSize) {
       bg.lineBetween(x, 0, x, ARENA_HEIGHT);
@@ -94,20 +92,14 @@ export class GameScene extends Phaser.Scene {
       bg.lineBetween(0, y, ARENA_WIDTH, y);
     }
 
-    // Team zone gradients (subtle tinted areas near each base)
+    // Team zones (flat, subtle tinted rectangles near each base)
     const zoneGfx = this.add.graphics();
     // Red zone (left side)
-    for (let i = 0; i < 8; i++) {
-      const alpha = 0.03 * (8 - i) / 8;
-      zoneGfx.fillStyle(COLOR_RED_ZONE, alpha);
-      zoneGfx.fillRect(0, 0, 80 + i * 20, ARENA_HEIGHT);
-    }
+    zoneGfx.fillStyle(COLOR_RED_ZONE, 0.06);
+    zoneGfx.fillRect(0, 0, 160, ARENA_HEIGHT);
     // Blue zone (right side)
-    for (let i = 0; i < 8; i++) {
-      const alpha = 0.03 * (8 - i) / 8;
-      zoneGfx.fillStyle(COLOR_BLUE_ZONE, alpha);
-      zoneGfx.fillRect(ARENA_WIDTH - 80 - i * 20, 0, 80 + i * 20, ARENA_HEIGHT);
-    }
+    zoneGfx.fillStyle(COLOR_BLUE_ZONE, 0.06);
+    zoneGfx.fillRect(ARENA_WIDTH - 160, 0, 160, ARENA_HEIGHT);
 
     // Center line with dashes
     const centerGfx = this.add.graphics();
@@ -120,30 +112,13 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Center circle
-    centerGfx.lineStyle(1, COLOR_CENTER_LINE, 0.4);
+    centerGfx.lineStyle(1, COLOR_CENTER_LINE, 0.5);
     centerGfx.strokeCircle(centerX, ARENA_HEIGHT / 2, 60);
 
-    // Arena border (thick, clean)
+    // Arena border (thick hand-drawn charcoal stroke)
     const border = this.add.graphics();
-    border.lineStyle(3, COLOR_BORDER, 0.8);
+    border.lineStyle(3, COLOR_BORDER, 1);
     border.strokeRect(1, 1, ARENA_WIDTH - 2, ARENA_HEIGHT - 2);
-
-    // Corner accents
-    const cornerSize = 20;
-    const accentGfx = this.add.graphics();
-    accentGfx.lineStyle(2, COLOR_BORDER, 0.5);
-    // Top-left
-    accentGfx.lineBetween(0, cornerSize, 0, 0);
-    accentGfx.lineBetween(0, 0, cornerSize, 0);
-    // Top-right
-    accentGfx.lineBetween(ARENA_WIDTH, cornerSize, ARENA_WIDTH, 0);
-    accentGfx.lineBetween(ARENA_WIDTH, 0, ARENA_WIDTH - cornerSize, 0);
-    // Bottom-left
-    accentGfx.lineBetween(0, ARENA_HEIGHT - cornerSize, 0, ARENA_HEIGHT);
-    accentGfx.lineBetween(0, ARENA_HEIGHT, cornerSize, ARENA_HEIGHT);
-    // Bottom-right
-    accentGfx.lineBetween(ARENA_WIDTH, ARENA_HEIGHT - cornerSize, ARENA_WIDTH, ARENA_HEIGHT);
-    accentGfx.lineBetween(ARENA_WIDTH, ARENA_HEIGHT, ARENA_WIDTH - cornerSize, ARENA_HEIGHT);
   }
 
   update(_time: number, delta: number): void {

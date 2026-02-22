@@ -80,7 +80,7 @@ const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   width: ARENA_WIDTH,
   height: ARENA_HEIGHT,
-  backgroundColor: '#0a0a1a',
+  backgroundColor: '#ede4d3',
   parent: document.body,
   scene: [BootScene, GameScene],
   physics: {

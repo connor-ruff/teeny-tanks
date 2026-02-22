@@ -1,8 +1,8 @@
 import { ProjectileState, PROJECTILE_RADIUS } from '@teeny-tanks/shared';
 
-const COLOR_BULLET_CORE = 0xffffff;
-const COLOR_BULLET_OUTER = 0xffcc00;
-const COLOR_BULLET_GLOW = 0xffcc00;
+const COLOR_BULLET_CORE = 0xf5f0e8;
+const COLOR_BULLET_OUTER = 0x2c2c2c;
+const COLOR_TRAIL = 0x6b6358;
 
 export class ProjectileSprite {
   private graphics: Phaser.GameObjects.Graphics;
@@ -22,12 +22,6 @@ export class ProjectileSprite {
   private drawAt(x: number, y: number): void {
     this.graphics.clear();
 
-    // Outer glow
-    this.graphics.fillStyle(COLOR_BULLET_GLOW, 0.1);
-    this.graphics.fillCircle(x, y, PROJECTILE_RADIUS * 4);
-    this.graphics.fillStyle(COLOR_BULLET_GLOW, 0.15);
-    this.graphics.fillCircle(x, y, PROJECTILE_RADIUS * 2.5);
-
     // Short trail (line from previous position)
     const dx = x - this.prevX;
     const dy = y - this.prevY;
@@ -39,17 +33,15 @@ export class ProjectileSprite {
       const tailX = x - nx * Math.min(trailLen, 14);
       const tailY = y - ny * Math.min(trailLen, 14);
 
-      this.graphics.lineStyle(3, COLOR_BULLET_OUTER, 0.4);
-      this.graphics.lineBetween(tailX, tailY, x, y);
-      this.graphics.lineStyle(1, COLOR_BULLET_CORE, 0.6);
+      this.graphics.lineStyle(2, COLOR_TRAIL, 0.6);
       this.graphics.lineBetween(tailX, tailY, x, y);
     }
 
-    // Bullet body
+    // Bullet body (dark charcoal -- looks like a pencil dot)
     this.graphics.fillStyle(COLOR_BULLET_OUTER);
     this.graphics.fillCircle(x, y, PROJECTILE_RADIUS + 1);
 
-    // Bright core
+    // Bright core (cream center)
     this.graphics.fillStyle(COLOR_BULLET_CORE);
     this.graphics.fillCircle(x, y, PROJECTILE_RADIUS - 1);
   }
