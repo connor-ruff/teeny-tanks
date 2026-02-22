@@ -62,13 +62,12 @@ function bounceProjectileOffWall(
   const tEntry = Math.max(tMinX, tMinY);
   const tExit  = Math.min(tMaxX, tMaxY);
 
-  // No intersection during this tick
-  if (tEntry > tExit || tEntry > 1 || tExit < 0) return;
+  // No intersection during this tick (tEntry < 0 means bullet already past or moving away)
+  if (tEntry > tExit || tEntry > 1 || tEntry < 0) return;
 
   // Place projectile at the entry point
-  const tHit = Math.max(0, tEntry);
-  proj.x = x0 + dx * tHit;
-  proj.y = y0 + dy * tHit;
+  proj.x = x0 + dx * tEntry;
+  proj.y = y0 + dy * tEntry;
 
   // Reflect the axis that was last to enter the slab
   if (tMinX > tMinY) {
