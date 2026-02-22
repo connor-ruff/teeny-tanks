@@ -11,7 +11,7 @@ export const ARENA_HEIGHT = ACTIVE_MAP.height;
 // Tank
 export const TANK_SPEED = 150; // pixels per second
 export const TANK_REVERSE_MULTIPLIER = 0.8; // reverse is slower than forward (fraction of TANK_SPEED)
-export const TANK_ROTATION_SPEED = 3; // radians per second
+export const TANK_ROTATION_SPEED = 2; // radians per second
 export const TANK_WIDTH = 35;
 export const TANK_HEIGHT = 26;
 export const TANK_SHOOT_COOLDOWN = 500; // ms
@@ -26,9 +26,9 @@ export const PROJECTILE_LIFETIME = 2000; // ms
 export const PROJECTILE_SPAWN_OFFSET = 5; // px — extra gap between tank edge and spawned bullet
 
 // Flag
-export const FLAG_RADIUS = 15;
-export const FLAG_PICKUP_DISTANCE = 30;
-export const CAPTURE_ZONE_RADIUS = 50;
+export const FLAG_RADIUS = 12;
+export const FLAG_PICKUP_DISTANCE = 20;
+export const CAPTURE_ZONE_RADIUS = 35;
 export const FLAG_BASE_INSET = 80; // px — how far each flag sits from the top/bottom arena edge
 
 // Teams
