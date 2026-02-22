@@ -2,16 +2,63 @@ import {
   GameState,
   PlayerInput,
   TankState,
+  ProjectileState,
   TANK_SHOOT_COOLDOWN,
+  TANK_RESPAWN_DELAY,
   PROJECTILE_LIFETIME,
   PROJECTILE_RADIUS,
+  PROJECTILE_SPAWN_OFFSET,
   TANK_WIDTH,
   TANK_HEIGHT,
   ARENA_WIDTH,
   ARENA_HEIGHT,
+  WallRect,
+  ACTIVE_MAP,
 } from '@teeny-tanks/shared';
 import { createProjectile } from '../entities/Projectile.js';
 import { respawnTank } from '../entities/Tank.js';
+
+function bounceProjectileOffWall(proj: ProjectileState, wall: WallRect): void {
+  const closestX = Math.max(wall.x, Math.min(wall.x + wall.width, proj.x));
+  const closestY = Math.max(wall.y, Math.min(wall.y + wall.height, proj.y));
+
+  const dx = proj.x - closestX;
+  const dy = proj.y - closestY;
+  const distSq = dx * dx + dy * dy;
+
+  if (distSq >= PROJECTILE_RADIUS * PROJECTILE_RADIUS) return;
+
+  const dist = Math.sqrt(distSq);
+
+  if (dist < 0.001) {
+    // Projectile center is inside the wall — push out along shortest face
+    const leftDist  = proj.x - wall.x;
+    const rightDist = wall.x + wall.width - proj.x;
+    const topDist   = proj.y - wall.y;
+    const botDist   = wall.y + wall.height - proj.y;
+    const min = Math.min(leftDist, rightDist, topDist, botDist);
+    if (min === leftDist)  { proj.x = wall.x - PROJECTILE_RADIUS;              proj.vx = -Math.abs(proj.vx); }
+    else if (min === rightDist) { proj.x = wall.x + wall.width + PROJECTILE_RADIUS; proj.vx =  Math.abs(proj.vx); }
+    else if (min === topDist)   { proj.y = wall.y - PROJECTILE_RADIUS;              proj.vy = -Math.abs(proj.vy); }
+    else                        { proj.y = wall.y + wall.height + PROJECTILE_RADIUS; proj.vy =  Math.abs(proj.vy); }
+  } else {
+    // Push out along normal from closest point to projectile center
+    const nx = dx / dist;
+    const ny = dy / dist;
+    const push = PROJECTILE_RADIUS - dist;
+    proj.x += nx * push;
+    proj.y += ny * push;
+
+    // Reflect velocity along dominant axis of the normal
+    if (Math.abs(nx) >= Math.abs(ny)) {
+      proj.vx = nx > 0 ? Math.abs(proj.vx) : -Math.abs(proj.vx);
+    } else {
+      proj.vy = ny > 0 ? Math.abs(proj.vy) : -Math.abs(proj.vy);
+    }
+  }
+
+  proj.rotation = Math.atan2(proj.vy, proj.vx);
+}
 
 export interface ProjectileEvents {
   kills: Array<{ killerId: string; victimId: string }>;
@@ -32,8 +79,8 @@ export function updateProjectiles(
 
     if (now - tank.lastShotTime >= TANK_SHOOT_COOLDOWN) {
       // Spawn projectile at the front of the tank barrel
-      const spawnX = tank.x + Math.cos(tank.rotation) * (TANK_WIDTH / 2 + 5);
-      const spawnY = tank.y + Math.sin(tank.rotation) * (TANK_HEIGHT / 2 + 5);
+      const spawnX = tank.x + Math.cos(tank.rotation) * (TANK_WIDTH / 2 + PROJECTILE_SPAWN_OFFSET);
+      const spawnY = tank.y + Math.sin(tank.rotation) * (TANK_HEIGHT / 2 + PROJECTILE_SPAWN_OFFSET);
       const proj = createProjectile(playerId, spawnX, spawnY, tank.rotation, now);
       state.projectiles.push(proj);
       tank.lastShotTime = now;
@@ -65,6 +112,11 @@ export function updateProjectiles(
       proj.y = ARENA_HEIGHT - PROJECTILE_RADIUS;
       proj.vy = -Math.abs(proj.vy);
       proj.rotation = Math.atan2(proj.vy, proj.vx);
+    }
+
+    // Bounce off interior walls
+    for (const wall of ACTIVE_MAP.walls) {
+      bounceProjectileOffWall(proj, wall);
     }
   }
 
@@ -109,7 +161,7 @@ export function updateProjectiles(
           // Respawn after a brief cooldown
           setTimeout(() => {
             respawnTank(tank);
-          }, 2000);
+          }, TANK_RESPAWN_DELAY);
         }
         break;
       }

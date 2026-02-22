@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GameState, ARENA_WIDTH, ARENA_HEIGHT, TICK_INTERVAL, Team } from '@teeny-tanks/shared';
+import { GameState, ARENA_WIDTH, ARENA_HEIGHT, TICK_INTERVAL, Team, ACTIVE_MAP } from '@teeny-tanks/shared';
 import { SocketManager } from '../network/SocketManager.js';
 import { HudManager } from '../ui/HudManager.js';
 import { InputManager } from '../input/InputManager.js';
@@ -13,6 +13,8 @@ const COLOR_BORDER = 0x2c2c2c;
 const COLOR_CENTER_LINE = 0x8a7f6e;
 const COLOR_RED_ZONE = 0xb94040;
 const COLOR_BLUE_ZONE = 0x4a6fa5;
+const COLOR_WALL_FILL = 0xc9b99a;
+const COLOR_WALL_STROKE = 0x2c2c2c;
 
 export class GameScene extends Phaser.Scene {
   private socketManager!: SocketManager;
@@ -54,9 +56,9 @@ export class GameScene extends Phaser.Scene {
       const killerTeam: Team = killerTank?.team ?? 'red';
       const victimTeam: Team = victimTank?.team ?? 'blue';
 
-      // Shorten IDs for display
-      const killerName = data.killerId.slice(0, 6);
-      const victimName = data.victimId.slice(0, 6);
+      // Use display names, falling back to truncated IDs
+      const killerName = killerTank?.displayName || data.killerId.slice(0, 6);
+      const victimName = victimTank?.displayName || data.victimId.slice(0, 6);
 
       this.hudManager.addKillEntry(killerTeam, victimTeam, killerName, victimName);
 
@@ -114,6 +116,29 @@ export class GameScene extends Phaser.Scene {
     // Center circle
     centerGfx.lineStyle(1, COLOR_CENTER_LINE, 0.5);
     centerGfx.strokeCircle(ARENA_WIDTH / 2, centerY, 60);
+
+    // Interior walls
+    const wallGfx = this.add.graphics();
+    for (const wall of ACTIVE_MAP.walls) {
+      const { x, y, width: w, height: h } = wall;
+
+      // Drop shadow (offset 2px down-right, 15% black)
+      wallGfx.fillStyle(0x000000, 0.15);
+      wallGfx.fillRect(x + 2, y + 2, w, h);
+
+      // Fill
+      wallGfx.fillStyle(COLOR_WALL_FILL, 1);
+      wallGfx.fillRect(x, y, w, h);
+
+      // Charcoal outline
+      wallGfx.lineStyle(1.5, COLOR_WALL_STROKE, 1);
+      wallGfx.strokeRect(x, y, w, h);
+
+      // Subtle inner highlight on top and left edges
+      wallGfx.lineStyle(1, 0xffffff, 0.3);
+      wallGfx.lineBetween(x, y, x + w, y);       // top edge
+      wallGfx.lineBetween(x, y, x, y + h);       // left edge
+    }
 
     // Arena border (thick hand-drawn charcoal stroke)
     const border = this.add.graphics();

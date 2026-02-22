@@ -8,6 +8,7 @@ export interface Vec2 {
 export interface TankState {
   id: string;
   team: Team;
+  displayName: string;
   x: number;
   y: number;
   rotation: number; // radians

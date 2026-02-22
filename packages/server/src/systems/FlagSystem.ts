@@ -34,9 +34,12 @@ export function updateFlags(state: GameState): FlagEvents {
           state.scores[carrier.team] += 1;
           events.captures.push({ team: carrier.team, playerId: carrier.id });
 
-          // Reset all tanks to spawn positions (full map reset per spec)
+          // Reset all tanks to spawn positions (full map reset per spec).
+          // Assign per-team slot indices so tanks spread out around the flag.
+          const resetSlots: Record<string, number> = { red: 0, blue: 0 };
           for (const tank of Object.values(state.tanks)) {
-            respawnTank(tank);
+            const slot = resetSlots[tank.team]++;
+            respawnTank(tank, slot);
           }
 
           // Reset both flags to their bases

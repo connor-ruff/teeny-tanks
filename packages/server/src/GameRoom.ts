@@ -15,6 +15,7 @@ import { createFlag } from './entities/Flag.js';
 import { updatePhysics } from './systems/PhysicsSystem.js';
 import { updateProjectiles } from './systems/ProjectileSystem.js';
 import { updateFlags } from './systems/FlagSystem.js';
+import { resolveCollisions } from './systems/CollisionSystem.js';
 
 type TypedSocket = Socket<ClientToServerEvents, ServerToClientEvents>;
 
@@ -130,10 +131,13 @@ export class GameRoom {
    * notify all clients, and start the server game loop.
    */
   private initializeGame(): void {
-    // Create tank entities for every player using their assigned teams
+    // Create tank entities for every player using their assigned teams.
+    // Track per-team slot index so each player gets a unique spawn position.
+    const teamSlotCounters: Record<Team, number> = { red: 0, blue: 0 };
     for (const player of this.lobbyPlayers) {
       const team = player.team as Team; // guaranteed non-null after auto-assign
-      const tank = createTank(player.id, team);
+      const slotIndex = teamSlotCounters[team]++;
+      const tank = createTank(player.id, team, slotIndex, player.displayName);
       this.state.tanks[player.id] = tank;
 
       const socket = this.sockets.get(player.id);
@@ -219,6 +223,7 @@ export class GameRoom {
 
       // Run systems
       updatePhysics(this.state, this.inputs, dt);
+      resolveCollisions(this.state, this.inputs);
 
       const projEvents = updateProjectiles(this.state, this.inputs, dt, now);
       for (const kill of projEvents.kills) {

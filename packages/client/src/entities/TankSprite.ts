@@ -1,6 +1,4 @@
-import { TankState, TANK_WIDTH, TANK_HEIGHT } from '@teeny-tanks/shared';
-
-const LERP_SPEED = 0.2;
+import { TankState, TANK_WIDTH, TANK_HEIGHT, LERP_SPEED, SNAP_THRESHOLD } from '@teeny-tanks/shared';
 
 // Pencil-box team color palettes (muted, crayon-like)
 const TEAM_COLORS = {
@@ -18,11 +16,6 @@ const COLOR_OUTLINE = 0x2c2c2c;
 const COLOR_BARREL = 0x6b6358;
 const COLOR_BARREL_TIP = 0x2c2c2c;
 const COLOR_FLAG_INDICATOR = 0xc9a84c;
-const COLOR_HEALTH_BG = 0xd4cbbf;
-const COLOR_HEALTH_BORDER = 0x2c2c2c;
-const COLOR_HEALTH_GOOD = 0x5a7a3a;
-const COLOR_HEALTH_MID = 0xc9a84c;
-const COLOR_HEALTH_LOW = 0xb94040;
 const COLOR_DEAD_TINT = 0xa09888;
 
 export class TankSprite {
@@ -47,15 +40,15 @@ export class TankSprite {
     this.graphics = scene.add.graphics();
     this.graphics.setPosition(state.x, state.y);
 
-    // "YOU" label for local player
-    this.label = scene.add.text(state.x, state.y - 32, isLocal ? 'YOU' : '', {
-      fontSize: '11px',
-      fontFamily: "'Fredoka One', sans-serif",
-      color: '#2c2c2c',
+    // Player name label above tank
+    const labelText = isLocal ? `${state.displayName} (YOU)` : state.displayName;
+    this.label = scene.add.text(state.x, state.y - 30, labelText, {
+      fontSize: '13px',
+      fontFamily: "'Patrick Hand', sans-serif",
+      color: '#f5f0e8',
       align: 'center',
-      fontStyle: 'bold',
-      stroke: '#ede4d3',
-      strokeThickness: 2,
+      stroke: '#2c2c2c',
+      strokeThickness: 3,
     });
     this.label.setOrigin(0.5, 0.5);
 
@@ -143,38 +136,6 @@ export class TankSprite {
       this.graphics.strokeCircle(0, -TANK_HEIGHT / 2 - 10, 5);
     }
 
-    // Health bar
-    if (state.alive) {
-      const barWidth = TANK_WIDTH + 4;
-      const barHeight = 5;
-      const barY = TANK_HEIGHT / 2 + 6;
-      const healthPct = state.health / 3;
-
-      // Background
-      this.graphics.fillStyle(COLOR_HEALTH_BG);
-      this.graphics.fillRoundedRect(-barWidth / 2, barY, barWidth, barHeight, 2);
-
-      // Border
-      this.graphics.lineStyle(1, COLOR_HEALTH_BORDER);
-      this.graphics.strokeRoundedRect(-barWidth / 2, barY, barWidth, barHeight, 2);
-
-      // Health fill
-      let healthColor = COLOR_HEALTH_GOOD;
-      if (healthPct <= 0.33) healthColor = COLOR_HEALTH_LOW;
-      else if (healthPct <= 0.66) healthColor = COLOR_HEALTH_MID;
-
-      const fillWidth = Math.max(0, (barWidth - 2) * healthPct);
-      if (fillWidth > 0) {
-        this.graphics.fillStyle(healthColor);
-        this.graphics.fillRoundedRect(
-          -barWidth / 2 + 1,
-          barY + 1,
-          fillWidth,
-          barHeight - 2,
-          1,
-        );
-      }
-    }
   }
 
   syncTo(state: TankState): void {
@@ -182,17 +143,29 @@ export class TankSprite {
     this.targetY = state.y;
     this.targetRotation = state.rotation;
 
-    // Lerp position for smooth movement
     const currentX = this.graphics.x;
     const currentY = this.graphics.y;
-    const newX = currentX + (this.targetX - currentX) * LERP_SPEED;
-    const newY = currentY + (this.targetY - currentY) * LERP_SPEED;
+    const dx = this.targetX - currentX;
+    const dy = this.targetY - currentY;
+    const distSq = dx * dx + dy * dy;
+
+    // Snap instantly when the position jump is large (e.g., map reset teleport).
+    // Otherwise lerp for smooth frame-to-frame movement.
+    let newX: number;
+    let newY: number;
+    if (distSq > SNAP_THRESHOLD * SNAP_THRESHOLD) {
+      newX = this.targetX;
+      newY = this.targetY;
+    } else {
+      newX = currentX + dx * LERP_SPEED;
+      newY = currentY + dy * LERP_SPEED;
+    }
 
     this.graphics.setPosition(newX, newY);
     this.graphics.rotation = this.targetRotation;
 
     // Update label position (stays above tank, not rotated)
-    this.label.setPosition(newX, newY - 32);
+    this.label.setPosition(newX, newY - 30);
 
     this.draw(state);
   }
