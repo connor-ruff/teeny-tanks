@@ -9,8 +9,8 @@ export const ARENA_WIDTH = ACTIVE_MAP.width;
 export const ARENA_HEIGHT = ACTIVE_MAP.height;
 
 // Tank
-export const TANK_SPEED = 200; // pixels per second
-export const TANK_REVERSE_MULTIPLIER = 0.5; // reverse is slower than forward (fraction of TANK_SPEED)
+export const TANK_SPEED = 150; // pixels per second
+export const TANK_REVERSE_MULTIPLIER = 0.8; // reverse is slower than forward (fraction of TANK_SPEED)
 export const TANK_ROTATION_SPEED = 3; // radians per second
 export const TANK_WIDTH = 35;
 export const TANK_HEIGHT = 26;

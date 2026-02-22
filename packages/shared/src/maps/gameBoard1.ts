@@ -21,7 +21,9 @@ export const GAME_BOARD_1: MapDefinition = {
   //     │                                               │  ← y=190 (180+10)
 
   walls: [
-    { x: 125, y: 180, width: 250, height: 10 }, // Red barrier (in front of red flag)
-    { x: 125, y: 660, width: 250, height: 10 }, // Blue barrier (in front of blue flag)
+    { x: 125, y: 150, width: 250, height: 10 }, // Red barrier (in front of red flag)
+    { x: 125, y: 690, width: 250, height: 10 }, // Blue barrier (in front of blue flag)
+    { x: 0, y: 300, width: 200, height: 250 },   // Left barrier (in middle of arena)
+    { x: 300, y: 300, width: 200, height: 250 },   // Right barrier (in middle of arena)
   ],
 };

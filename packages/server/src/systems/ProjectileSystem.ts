@@ -18,43 +18,63 @@ import {
 import { createProjectile } from '../entities/Projectile.js';
 import { respawnTank } from '../entities/Tank.js';
 
-function bounceProjectileOffWall(proj: ProjectileState, wall: WallRect): void {
-  const closestX = Math.max(wall.x, Math.min(wall.x + wall.width, proj.x));
-  const closestY = Math.max(wall.y, Math.min(wall.y + wall.height, proj.y));
+function bounceProjectileOffWall(
+  proj: ProjectileState,
+  wall: WallRect,
+  x0: number,
+  y0: number,
+): void {
+  const r = PROJECTILE_RADIUS;
+  const dx = proj.x - x0;
+  const dy = proj.y - y0;
 
-  const dx = proj.x - closestX;
-  const dy = proj.y - closestY;
-  const distSq = dx * dx + dy * dy;
+  // Expand wall rect by projectile radius (Minkowski sum — treat proj as a point)
+  const ex  = wall.x - r;
+  const ey  = wall.y - r;
+  const ex2 = wall.x + wall.width + r;
+  const ey2 = wall.y + wall.height + r;
 
-  if (distSq >= PROJECTILE_RADIUS * PROJECTILE_RADIUS) return;
+  // Slab method: find t-range where the segment [x0,y0]->[proj.x,proj.y] overlaps each slab
+  let tMinX: number, tMaxX: number, tMinY: number, tMaxY: number;
 
-  const dist = Math.sqrt(distSq);
-
-  if (dist < 0.001) {
-    // Projectile center is inside the wall — push out along shortest face
-    const leftDist  = proj.x - wall.x;
-    const rightDist = wall.x + wall.width - proj.x;
-    const topDist   = proj.y - wall.y;
-    const botDist   = wall.y + wall.height - proj.y;
-    const min = Math.min(leftDist, rightDist, topDist, botDist);
-    if (min === leftDist)  { proj.x = wall.x - PROJECTILE_RADIUS;              proj.vx = -Math.abs(proj.vx); }
-    else if (min === rightDist) { proj.x = wall.x + wall.width + PROJECTILE_RADIUS; proj.vx =  Math.abs(proj.vx); }
-    else if (min === topDist)   { proj.y = wall.y - PROJECTILE_RADIUS;              proj.vy = -Math.abs(proj.vy); }
-    else                        { proj.y = wall.y + wall.height + PROJECTILE_RADIUS; proj.vy =  Math.abs(proj.vy); }
+  if (Math.abs(dx) < 1e-9) {
+    // Moving vertically — check if start x is inside the x-slab
+    if (x0 < ex || x0 > ex2) return;
+    tMinX = -Infinity;
+    tMaxX =  Infinity;
   } else {
-    // Push out along normal from closest point to projectile center
-    const nx = dx / dist;
-    const ny = dy / dist;
-    const push = PROJECTILE_RADIUS - dist;
-    proj.x += nx * push;
-    proj.y += ny * push;
+    tMinX = (ex  - x0) / dx;
+    tMaxX = (ex2 - x0) / dx;
+    if (tMinX > tMaxX) { const tmp = tMinX; tMinX = tMaxX; tMaxX = tmp; }
+  }
 
-    // Reflect velocity along dominant axis of the normal
-    if (Math.abs(nx) >= Math.abs(ny)) {
-      proj.vx = nx > 0 ? Math.abs(proj.vx) : -Math.abs(proj.vx);
-    } else {
-      proj.vy = ny > 0 ? Math.abs(proj.vy) : -Math.abs(proj.vy);
-    }
+  if (Math.abs(dy) < 1e-9) {
+    // Moving horizontally — check if start y is inside the y-slab
+    if (y0 < ey || y0 > ey2) return;
+    tMinY = -Infinity;
+    tMaxY =  Infinity;
+  } else {
+    tMinY = (ey  - y0) / dy;
+    tMaxY = (ey2 - y0) / dy;
+    if (tMinY > tMaxY) { const tmp = tMinY; tMinY = tMaxY; tMaxY = tmp; }
+  }
+
+  const tEntry = Math.max(tMinX, tMinY);
+  const tExit  = Math.min(tMaxX, tMaxY);
+
+  // No intersection during this tick
+  if (tEntry > tExit || tEntry > 1 || tExit < 0) return;
+
+  // Place projectile at the entry point
+  const tHit = Math.max(0, tEntry);
+  proj.x = x0 + dx * tHit;
+  proj.y = y0 + dy * tHit;
+
+  // Reflect the axis that was last to enter the slab
+  if (tMinX > tMinY) {
+    proj.vx = -proj.vx;
+  } else {
+    proj.vy = -proj.vy;
   }
 
   proj.rotation = Math.atan2(proj.vy, proj.vx);
@@ -89,6 +109,8 @@ export function updateProjectiles(
 
   // Move projectiles using velocity components and bounce off arena walls
   for (const proj of state.projectiles) {
+    const x0 = proj.x;
+    const y0 = proj.y;
     proj.x += proj.vx * dt;
     proj.y += proj.vy * dt;
 
@@ -116,7 +138,7 @@ export function updateProjectiles(
 
     // Bounce off interior walls
     for (const wall of ACTIVE_MAP.walls) {
-      bounceProjectileOffWall(proj, wall);
+      bounceProjectileOffWall(proj, wall, x0, y0);
     }
   }
 
