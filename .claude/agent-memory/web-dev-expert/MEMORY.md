@@ -35,3 +35,12 @@
 - Systems: `packages/server/src/systems/` (PhysicsSystem.ts, ProjectileSystem.ts, FlagSystem.ts)
 - Client entities: `packages/client/src/entities/` (*Sprite.ts files)
 - Client UI: `packages/client/src/ui/` (RoomScreen.ts, LobbyManager.ts, HudManager.ts)
+
+## Gameplay Rules (Finalized Specs)
+- 2 teams (Red/Blue), 1–5 players each
+- **Map is VERTICAL**: flags at north/south (top/bottom), NOT east/west — all coordinate logic must use Y-axis for team sides
+- 1 bullet kills any tank (including self/teammates — friendly fire always on)
+- Bullets bounce off all 4 edges; expire by time OR on tank hit
+- Score = return enemy flag to your flag spawn; map resets instantly on each point
+- End-game: first to target score (configurable, typically 3 or 5); server emits `gameOver` event
+- Respawn: near home base after brief cooldown

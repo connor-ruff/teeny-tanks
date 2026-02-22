@@ -24,6 +24,8 @@ export interface ProjectileState {
   y: number;
   rotation: number;
   speed: number;
+  vx: number; // x velocity component (pixels/second), updated on wall bounce
+  vy: number; // y velocity component (pixels/second), updated on wall bounce
   createdAt: number;
 }
 
@@ -95,4 +97,6 @@ export interface ServerToClientEvents {
   playerAssignment: (data: { playerId: string; team: Team }) => void;
   flagCaptured: (data: { team: Team; playerId: string }) => void;
   playerKilled: (data: { killerId: string; victimId: string }) => void;
+  /** Broadcast when a team reaches the score limit; game loop stops after this */
+  gameOver: (data: { winner: Team }) => void;
 }

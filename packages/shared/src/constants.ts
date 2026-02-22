@@ -27,20 +27,23 @@ export const CAPTURE_ZONE_RADIUS = 50;
 export const TEAM_RED = 'red' as const;
 export const TEAM_BLUE = 'blue' as const;
 
-// Spawn positions
+// Spawn positions (vertical layout — red at top/north, blue at bottom/south)
 export const SPAWN_POSITIONS = {
-  red: { x: 100, y: ARENA_HEIGHT / 2 },
-  blue: { x: ARENA_WIDTH - 100, y: ARENA_HEIGHT / 2 },
+  red: { x: ARENA_WIDTH / 2, y: 80 },
+  blue: { x: ARENA_WIDTH / 2, y: ARENA_HEIGHT - 80 },
 };
 
 // Flag positions (each team's flag is at their base)
 export const FLAG_POSITIONS = {
-  red: { x: 100, y: ARENA_HEIGHT / 2 },
-  blue: { x: ARENA_WIDTH - 100, y: ARENA_HEIGHT / 2 },
+  red: { x: ARENA_WIDTH / 2, y: 80 },
+  blue: { x: ARENA_WIDTH / 2, y: ARENA_HEIGHT - 80 },
 };
 
 // Capture zones (bring enemy flag to your own base)
 export const CAPTURE_ZONES = {
-  red: { x: 100, y: ARENA_HEIGHT / 2 },
-  blue: { x: ARENA_WIDTH - 100, y: ARENA_HEIGHT / 2 },
+  red: { x: ARENA_WIDTH / 2, y: 80 },
+  blue: { x: ARENA_WIDTH / 2, y: ARENA_HEIGHT - 80 },
 };
+
+// Score limit — first team to reach this many captures wins
+export const SCORE_LIMIT = 3;

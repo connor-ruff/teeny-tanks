@@ -1,4 +1,4 @@
-import { GameState, Team } from '@teeny-tanks/shared';
+import { GameState, Team, SCORE_LIMIT } from '@teeny-tanks/shared';
 
 const KILL_FEED_MAX = 5;
 const KILL_FEED_DURATION = 4000;
@@ -14,6 +14,7 @@ export class HudManager {
   private scoreBlueEl: HTMLElement;
   private killFeedEl: HTMLElement;
   private respawnEl: HTMLElement;
+  private gameOverEl: HTMLElement;
   private lastScores = { red: 0, blue: 0 };
 
   constructor() {
@@ -22,6 +23,12 @@ export class HudManager {
     this.scoreBlueEl = document.getElementById('hud-score-blue')!;
     this.killFeedEl = document.getElementById('hud-kill-feed')!;
     this.respawnEl = document.getElementById('hud-respawn')!;
+    this.gameOverEl = document.getElementById('game-over-overlay')!;
+
+    // "Return to Lobby" reloads the page — simplest way to reset all state
+    document.getElementById('btn-play-again')?.addEventListener('click', () => {
+      window.location.reload();
+    });
   }
 
   show(): void {
@@ -33,8 +40,8 @@ export class HudManager {
   }
 
   updateScores(scores: Record<Team, number>): void {
-    this.scoreRedEl.textContent = String(scores.red);
-    this.scoreBlueEl.textContent = String(scores.blue);
+    this.scoreRedEl.textContent = `${scores.red} / ${SCORE_LIMIT}`;
+    this.scoreBlueEl.textContent = `${scores.blue} / ${SCORE_LIMIT}`;
     this.lastScores = { ...scores };
   }
 
@@ -68,7 +75,8 @@ export class HudManager {
     el.className = 'hud-announcement';
     el.textContent = text;
     el.style.color = color;
-    el.style.textShadow = `0 0 20px ${color}80, 0 2px 4px rgba(0,0,0,0.5)`;
+    // Flat paper-cutout drop shadow only — no glow
+    el.style.textShadow = '1px 1px 0 rgba(0,0,0,0.15)';
     this.hudEl.appendChild(el);
 
     setTimeout(() => {
@@ -86,5 +94,19 @@ export class HudManager {
     } else {
       this.respawnEl.classList.remove('visible');
     }
+  }
+
+  /**
+   * Show the game-over victory overlay when a team reaches the score limit.
+   */
+  showGameOver(winner: Team): void {
+    const titleEl = document.getElementById('game-over-title')!;
+    const scoreEl = document.getElementById('game-over-score')!;
+
+    titleEl.textContent = winner === 'red' ? 'Red Team Wins!' : 'Blue Team Wins!';
+    titleEl.className = `game-over-title ${winner}`;
+    scoreEl.textContent = `${this.lastScores.red} — ${this.lastScores.blue}`;
+
+    this.gameOverEl.classList.remove('hidden');
   }
 }

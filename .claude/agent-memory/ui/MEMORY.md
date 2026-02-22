@@ -76,3 +76,10 @@ Flag pole: `0x6b6358`, cap `0xf5f0e8`, indicator `0xc9a84c`.
 Bullet: outer `0x2c2c2c`, core `0xf5f0e8`, trail `0x6b6358`@0.6.
 Purged from Phaser: glowGraphics, ground glow halos, glow fillCircles, Math.sin pulse,
   highlight bevels, corner accents, gradient zone loops, Exo 2 font.
+
+## Game Layout & Screen Requirements (Finalized Specs)
+- **Canvas is VERTICAL** — team zones are top (Red) and bottom (Blue), not left/right
+- **End-game screen** required: shows winning team, final scores, return-to-lobby/play-again
+- **Score event overlay**: brief centered callout on each point; map resets immediately after
+- HUD score display: both teams always visible, styled as hand-labeled scoreboard tally
+- Red team = north/top, Blue team = south/bottom (inform any directional indicators)

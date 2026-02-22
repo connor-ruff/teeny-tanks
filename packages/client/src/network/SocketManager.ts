@@ -26,6 +26,7 @@ export class SocketManager {
   private onAssignCallbacks: Array<(data: { playerId: string; team: Team }) => void> = [];
   private onKillCallbacks: Array<(data: { killerId: string; victimId: string }) => void> = [];
   private onFlagCaptureCallbacks: Array<(data: { team: Team; playerId: string }) => void> = [];
+  private onGameOverCallbacks: Array<(data: { winner: Team }) => void> = [];
   private onRoomCreatedCallbacks: Array<(data: { code: string }) => void> = [];
   private onRoomJoinedCallbacks: Array<(data: { code: string }) => void> = [];
   private onRoomErrorCallbacks: Array<(data: { message: string }) => void> = [];
@@ -85,6 +86,11 @@ export class SocketManager {
     this.socket.on('playerKilled', (data) => {
       console.log(`Player ${data.victimId} killed by ${data.killerId}`);
       for (const cb of this.onKillCallbacks) cb(data);
+    });
+
+    this.socket.on('gameOver', (data) => {
+      console.log(`Game over — ${data.winner} wins!`);
+      for (const cb of this.onGameOverCallbacks) cb(data);
     });
   }
 
@@ -152,5 +158,9 @@ export class SocketManager {
 
   onFlagCapture(cb: (data: { team: Team; playerId: string }) => void): void {
     this.onFlagCaptureCallbacks.push(cb);
+  }
+
+  onGameOver(cb: (data: { winner: Team }) => void): void {
+    this.onGameOverCallbacks.push(cb);
   }
 }

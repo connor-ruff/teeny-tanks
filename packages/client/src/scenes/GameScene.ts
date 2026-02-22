@@ -92,28 +92,28 @@ export class GameScene extends Phaser.Scene {
       bg.lineBetween(0, y, ARENA_WIDTH, y);
     }
 
-    // Team zones (flat, subtle tinted rectangles near each base)
+    // Team zones (flat, subtle tinted rectangles at north/south — vertical map layout)
     const zoneGfx = this.add.graphics();
-    // Red zone (left side)
+    // Red zone (top/north)
     zoneGfx.fillStyle(COLOR_RED_ZONE, 0.06);
-    zoneGfx.fillRect(0, 0, 160, ARENA_HEIGHT);
-    // Blue zone (right side)
+    zoneGfx.fillRect(0, 0, ARENA_WIDTH, 120);
+    // Blue zone (bottom/south)
     zoneGfx.fillStyle(COLOR_BLUE_ZONE, 0.06);
-    zoneGfx.fillRect(ARENA_WIDTH - 160, 0, 160, ARENA_HEIGHT);
+    zoneGfx.fillRect(0, ARENA_HEIGHT - 120, ARENA_WIDTH, 120);
 
-    // Center line with dashes
+    // Center line with horizontal dashes (divides north/south teams)
     const centerGfx = this.add.graphics();
     centerGfx.lineStyle(2, COLOR_CENTER_LINE, 0.6);
     const dashLen = 12;
     const gapLen = 8;
-    const centerX = ARENA_WIDTH / 2;
-    for (let y = 0; y < ARENA_HEIGHT; y += dashLen + gapLen) {
-      centerGfx.lineBetween(centerX, y, centerX, Math.min(y + dashLen, ARENA_HEIGHT));
+    const centerY = ARENA_HEIGHT / 2;
+    for (let x = 0; x < ARENA_WIDTH; x += dashLen + gapLen) {
+      centerGfx.lineBetween(x, centerY, Math.min(x + dashLen, ARENA_WIDTH), centerY);
     }
 
     // Center circle
     centerGfx.lineStyle(1, COLOR_CENTER_LINE, 0.5);
-    centerGfx.strokeCircle(centerX, ARENA_HEIGHT / 2, 60);
+    centerGfx.strokeCircle(ARENA_WIDTH / 2, centerY, 60);
 
     // Arena border (thick hand-drawn charcoal stroke)
     const border = this.add.graphics();

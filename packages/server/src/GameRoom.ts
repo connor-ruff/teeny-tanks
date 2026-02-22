@@ -8,6 +8,7 @@ import {
   ClientToServerEvents,
   ServerToClientEvents,
   TICK_INTERVAL,
+  SCORE_LIMIT,
 } from '@teeny-tanks/shared';
 import { createTank } from './entities/Tank.js';
 import { createFlag } from './entities/Flag.js';
@@ -228,6 +229,14 @@ export class GameRoom {
       for (const capture of flagEvents.captures) {
         this.io.to(this.roomCode).emit('flagCaptured', capture);
         console.log(`[${this.roomCode}] Team ${capture.team} scored! (${this.state.scores.red} - ${this.state.scores.blue})`);
+
+        // Check win condition after each capture
+        if (this.state.scores[capture.team] >= SCORE_LIMIT) {
+          this.io.to(this.roomCode).emit('gameOver', { winner: capture.team });
+          console.log(`[${this.roomCode}] Game over — ${capture.team} wins!`);
+          this.stop();
+          return;
+        }
       }
 
       this.state.tick++;

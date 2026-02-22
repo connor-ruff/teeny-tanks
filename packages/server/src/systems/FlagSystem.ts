@@ -6,6 +6,7 @@ import {
   CAPTURE_ZONES,
 } from '@teeny-tanks/shared';
 import { resetFlag } from '../entities/Flag.js';
+import { respawnTank } from '../entities/Tank.js';
 
 export interface FlagEvents {
   captures: Array<{ team: Team; playerId: string }>;
@@ -29,11 +30,22 @@ export function updateFlags(state: GameState): FlagEvents {
         const dist = Math.sqrt(dx * dx + dy * dy);
 
         if (dist < CAPTURE_ZONE_RADIUS) {
-          // Score!
+          // Score! Award the point and immediately reset the map
           state.scores[carrier.team] += 1;
-          carrier.hasFlag = false;
           events.captures.push({ team: carrier.team, playerId: carrier.id });
-          resetFlag(flag);
+
+          // Reset all tanks to spawn positions (full map reset per spec)
+          for (const tank of Object.values(state.tanks)) {
+            respawnTank(tank);
+          }
+
+          // Reset both flags to their bases
+          for (const f of Object.values(state.flags)) {
+            resetFlag(f);
+          }
+
+          // Flags and tanks are reset; no further processing this tick
+          return events;
         }
       } else {
         // Carrier is dead or disconnected — drop the flag

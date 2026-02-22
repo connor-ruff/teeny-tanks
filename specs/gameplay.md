@@ -26,3 +26,7 @@ Bullets will "bounce" off of the map edges, dissapearing after a certain amount 
 
 When a point is scored by a team, the map is immediately reset, and all tanks and flags return to their starting positions.
 
+## Other Notes on Game Physics
+
+The game map should always be oriented VERTICALLY, meaning that the team flags are at the north and south end of the maps, rather than east and west. 
+

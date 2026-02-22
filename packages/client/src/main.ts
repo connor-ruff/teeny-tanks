@@ -75,6 +75,11 @@ socketManager.onAssignment((_data) => {
   // since the lobby is about to close.
 });
 
+// Show victory screen when a team reaches the score limit
+socketManager.onGameOver((data) => {
+  hudManager.showGameOver(data.winner);
+});
+
 // Phaser game config
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,

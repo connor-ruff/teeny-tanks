@@ -16,6 +16,8 @@ export function createProjectile(
     y,
     rotation,
     speed: PROJECTILE_SPEED,
+    vx: Math.cos(rotation) * PROJECTILE_SPEED,
+    vy: Math.sin(rotation) * PROJECTILE_SPEED,
     createdAt: now,
   };
 }

@@ -802,6 +802,52 @@
       margin-top: var(--space-md);
       font-style: italic;
     }
+
+    /* -- Game Over overlay -- */
+    #game-over-overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 150;
+      background: rgba(237, 228, 211, 0.93);
+      transition: opacity var(--transition-slow);
+    }
+
+    #game-over-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .game-over-card {
+      background: var(--bg-card);
+      border: 4px solid var(--border-dark);
+      border-radius: var(--radius-md);
+      padding: var(--space-xxl) 64px;
+      text-align: center;
+      box-shadow: 5px 5px 0 rgba(44, 44, 44, 0.3);
+    }
+
+    .game-over-title {
+      font-family: var(--font-display);
+      font-size: 52px;
+      font-weight: 400;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      margin-bottom: var(--space-md);
+    }
+
+    .game-over-title.red { color: var(--red-team); }
+    .game-over-title.blue { color: var(--blue-team); }
+
+    .game-over-score {
+      font-family: var(--font-display);
+      font-size: var(--font-size-xxl);
+      color: var(--text-secondary);
+      margin-bottom: var(--space-xl);
+      letter-spacing: 6px;
+    }
   </style>
 </head>
 <body>
@@ -896,6 +942,15 @@
 
     <div class="hud-respawn" id="hud-respawn">
       <p class="hud-respawn-text">Destroyed</p>
+    </div>
+  </div>
+
+  <!-- Game over overlay (shown when a team reaches the score limit) -->
+  <div id="game-over-overlay" class="hidden">
+    <div class="game-over-card">
+      <h1 class="game-over-title" id="game-over-title">Red Team Wins!</h1>
+      <p class="game-over-score" id="game-over-score">3 — 0</p>
+      <button class="room-create-btn" id="btn-play-again">Return to Lobby</button>
     </div>
   </div>
 
