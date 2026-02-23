@@ -10,6 +10,7 @@ import { respawnTank } from '../entities/Tank.js';
 
 export interface FlagEvents {
   captures: Array<{ team: Team; playerId: string }>;
+  returns?: Array<{ team: Team; playerId: string }>;
 }
 
 export function updateFlags(state: GameState): FlagEvents {
@@ -70,6 +71,25 @@ export function updateFlags(state: GameState): FlagEvents {
         flag.atBase = false;
         tank.hasFlag = true;
         break;
+      }
+    }
+
+    // Flag return: if the flag is dropped away from home, a friendly tank
+    // can drive over it to send it back to base (standard CTF return mechanic).
+    if (!flag.carrierId && !flag.atBase) {
+      for (const tank of Object.values(state.tanks)) {
+        if (!tank.alive || tank.team !== flagTeam) continue;
+
+        const dx = tank.x - flag.x;
+        const dy = tank.y - flag.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < FLAG_PICKUP_DISTANCE) {
+          resetFlag(flag);
+          events.returns = events.returns || [];
+          events.returns.push({ team: flagTeam, playerId: tank.id });
+          break;
+        }
       }
     }
   }

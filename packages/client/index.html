@@ -803,6 +803,69 @@
       font-style: italic;
     }
 
+    /* -- Lobby score limit control -- */
+    .lobby-score-limit {
+      margin-bottom: var(--space-lg);
+    }
+
+    .score-limit-control {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-md);
+    }
+
+    .score-limit-value {
+      font-family: var(--font-display);
+      font-size: var(--font-size-xl);
+      font-weight: 400;
+      color: var(--text-primary);
+      min-width: 48px;
+      text-align: center;
+      user-select: none;
+    }
+
+    .score-limit-btn {
+      width: 36px;
+      height: 36px;
+      border: 3px solid var(--border-dark);
+      border-radius: var(--radius-md);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-family: var(--font-display);
+      font-size: var(--font-size-lg);
+      font-weight: 400;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      box-shadow: var(--shadow-button);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+
+    .score-limit-btn:hover {
+      background: var(--bg-inset);
+      transform: translate(-1px, -1px);
+      box-shadow: 3px 3px 0 rgba(44, 44, 44, 0.3);
+    }
+
+    .score-limit-btn:active {
+      transform: translate(1px, 1px);
+      box-shadow: 1px 1px 0 rgba(44, 44, 44, 0.3);
+    }
+
+    .score-limit-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: var(--shadow-button);
+    }
+
+    .score-limit-btn.hidden {
+      visibility: hidden;
+    }
+
     /* -- Game Over overlay -- */
     #game-over-overlay {
       position: fixed;
@@ -914,6 +977,16 @@
         <div class="lobby-team-column blue">
           <h3 class="lobby-team-header blue">Blue Team</h3>
           <div class="lobby-team-list" id="lobby-team-blue"></div>
+        </div>
+      </div>
+
+      <!-- Score limit setting (host can change; non-host sees read-only) -->
+      <div class="lobby-score-limit" id="lobby-score-limit">
+        <p class="lobby-section-label">Score Limit</p>
+        <div class="score-limit-control">
+          <button class="score-limit-btn" id="btn-score-down">-</button>
+          <span class="score-limit-value" id="score-limit-value">3</span>
+          <button class="score-limit-btn" id="btn-score-up">+</button>
         </div>
       </div>
 

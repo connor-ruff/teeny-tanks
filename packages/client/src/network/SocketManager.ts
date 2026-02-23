@@ -34,7 +34,9 @@ export class SocketManager {
   private onGameStartedCallbacks: Array<() => void> = [];
 
   constructor() {
-    this.socket = io('http://localhost:3001');
+    // Connect to the current page origin so this works in both dev (Vite proxy)
+    // and production (nginx proxy). No hardcoded host/port needed.
+    this.socket = io();
 
     // Room events
     this.socket.on('roomCreated', (data) => {
@@ -109,6 +111,11 @@ export class SocketManager {
   /** Host assigns a player to a team */
   assignTeam(targetPlayerId: string, team: Team | null): void {
     this.socket.emit('assignTeam', { targetPlayerId, team });
+  }
+
+  /** Host sets the score limit */
+  setScoreLimit(scoreLimit: number): void {
+    this.socket.emit('setScoreLimit', { scoreLimit });
   }
 
   /** Host starts the game */

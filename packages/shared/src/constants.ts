@@ -20,9 +20,9 @@ export const TANK_PUSH_FACTOR = 0.35;   // fraction of overlap transferred to dr
 export const TANK_RESPAWN_DELAY = 2000; // ms — cooldown before destroyed tank reappears
 
 // Projectile
-export const PROJECTILE_SPEED = 400; // pixels per second
+export const PROJECTILE_SPEED = 300; // pixels per second
 export const PROJECTILE_RADIUS = 4;
-export const PROJECTILE_LIFETIME = 2000; // ms
+export const PROJECTILE_LIFETIME = 2500; // ms
 export const PROJECTILE_SPAWN_OFFSET = 5; // px — extra gap between tank edge and spawned bullet
 
 // Flag
@@ -81,7 +81,9 @@ export const CAPTURE_ZONES = {
 };
 
 // Gameplay
-export const SCORE_LIMIT = 3; // first team to reach this many captures wins
+export const SCORE_LIMIT_DEFAULT = 3; // default number of captures to win
+export const SCORE_LIMIT_MIN = 1;
+export const SCORE_LIMIT_MAX = 20;
 
 // Client interpolation
 export const LERP_SPEED = 0.2; // fraction of remaining distance moved per state update

@@ -73,6 +73,7 @@ export interface LobbyState {
   roomCode: string;
   hostId: string;
   players: LobbyPlayer[];
+  scoreLimit: number; // configurable win threshold (1–20), set by host
 }
 
 // Socket.IO typed events
@@ -81,6 +82,8 @@ export interface ClientToServerEvents {
   joinRoom: (data: { code: string; displayName: string }) => void;
   /** Host assigns a player to a team (or null to unassign) */
   assignTeam: (data: { targetPlayerId: string; team: Team | null }) => void;
+  /** Host sets the score limit (valid range: 1–20) */
+  setScoreLimit: (data: { scoreLimit: number }) => void;
   /** Host starts the game from the lobby */
   startGame: () => void;
   playerInput: (input: PlayerInput) => void;

@@ -61,10 +61,16 @@ lobbyManager.onStartGame = () => {
   socketManager.startGame();
 };
 
+lobbyManager.onSetScoreLimit = (scoreLimit: number) => {
+  socketManager.setScoreLimit(scoreLimit);
+};
+
 // ── Lobby -> game transition ──
 // The server emits 'gameStarted' when the host clicks start.
 
 socketManager.onGameStarted(() => {
+  // Pass the lobby-configured score limit to the HUD before showing it
+  hudManager.setScoreLimit(lobbyManager.getScoreLimit());
   lobbyManager.transitionToGame();
   hudManager.show();
 });

@@ -1,4 +1,4 @@
-import { Team, LobbyState, LobbyPlayer } from '@teeny-tanks/shared';
+import { Team, LobbyState, LobbyPlayer, SCORE_LIMIT_MIN, SCORE_LIMIT_MAX } from '@teeny-tanks/shared';
 
 /**
  * Manages the DOM-based lobby overlay.
@@ -14,15 +14,21 @@ export class LobbyManager {
   private teamRedEl: HTMLElement;
   private teamBlueEl: HTMLElement;
   private teamUnassignedEl: HTMLElement;
+  private scoreLimitValueEl: HTMLElement;
+  private scoreDownBtn: HTMLButtonElement;
+  private scoreUpBtn: HTMLButtonElement;
 
   /** The local player's socket ID */
   private localPlayerId: string | null = null;
   /** Whether the local player is the host */
   private isHost = false;
+  /** Current score limit from the server (kept in sync via lobbyUpdate) */
+  private currentScoreLimit = 3;
 
   // Callbacks
   public onStartGame: (() => void) | null = null;
   public onAssignTeam: ((targetPlayerId: string, team: Team | null) => void) | null = null;
+  public onSetScoreLimit: ((scoreLimit: number) => void) | null = null;
 
   constructor() {
     this.overlayEl = document.getElementById('lobby-overlay')!;
@@ -32,9 +38,24 @@ export class LobbyManager {
     this.teamRedEl = document.getElementById('lobby-team-red')!;
     this.teamBlueEl = document.getElementById('lobby-team-blue')!;
     this.teamUnassignedEl = document.getElementById('lobby-team-unassigned')!;
+    this.scoreLimitValueEl = document.getElementById('score-limit-value')!;
+    this.scoreDownBtn = document.getElementById('btn-score-down') as HTMLButtonElement;
+    this.scoreUpBtn = document.getElementById('btn-score-up') as HTMLButtonElement;
 
     this.startBtn.addEventListener('click', () => {
       if (this.onStartGame) this.onStartGame();
+    });
+
+    this.scoreDownBtn.addEventListener('click', () => {
+      if (this.onSetScoreLimit && this.currentScoreLimit > SCORE_LIMIT_MIN) {
+        this.onSetScoreLimit(this.currentScoreLimit - 1);
+      }
+    });
+
+    this.scoreUpBtn.addEventListener('click', () => {
+      if (this.onSetScoreLimit && this.currentScoreLimit < SCORE_LIMIT_MAX) {
+        this.onSetScoreLimit(this.currentScoreLimit + 1);
+      }
     });
   }
 
@@ -59,14 +80,26 @@ export class LobbyManager {
   updateLobby(state: LobbyState): void {
     this.isHost = this.localPlayerId === state.hostId;
 
-    // Show/hide the start button based on host status
+    // Update score limit display from server state
+    this.currentScoreLimit = state.scoreLimit;
+    this.scoreLimitValueEl.textContent = String(this.currentScoreLimit);
+
+    // Show/hide the start button and score limit controls based on host status
     if (this.isHost) {
       this.startBtn.style.display = '';
       this.statusEl.textContent = '';
+      // Host can interact with +/- buttons
+      this.scoreDownBtn.classList.remove('hidden');
+      this.scoreUpBtn.classList.remove('hidden');
+      this.scoreDownBtn.disabled = this.currentScoreLimit <= SCORE_LIMIT_MIN;
+      this.scoreUpBtn.disabled = this.currentScoreLimit >= SCORE_LIMIT_MAX;
     } else {
       this.startBtn.style.display = 'none';
       this.statusEl.className = 'status-text';
       this.statusEl.innerHTML = '<span class="connecting-spinner"></span> Waiting for host to start...';
+      // Non-host sees the value but cannot change it
+      this.scoreDownBtn.classList.add('hidden');
+      this.scoreUpBtn.classList.add('hidden');
     }
 
     // Partition players into team columns
@@ -163,6 +196,11 @@ export class LobbyManager {
 
       container.appendChild(chip);
     }
+  }
+
+  /** Returns the score limit configured in the lobby (for passing to the HUD) */
+  getScoreLimit(): number {
+    return this.currentScoreLimit;
   }
 
   /**

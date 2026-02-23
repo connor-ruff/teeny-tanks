@@ -1,4 +1,4 @@
-import { GameState, Team, SCORE_LIMIT } from '@teeny-tanks/shared';
+import { GameState, Team, SCORE_LIMIT_DEFAULT } from '@teeny-tanks/shared';
 
 const KILL_FEED_MAX = 5;
 const KILL_FEED_DURATION = 4000;
@@ -16,6 +16,7 @@ export class HudManager {
   private respawnEl: HTMLElement;
   private gameOverEl: HTMLElement;
   private lastScores = { red: 0, blue: 0 };
+  private scoreLimit: number = SCORE_LIMIT_DEFAULT;
 
   constructor() {
     this.hudEl = document.getElementById('game-hud')!;
@@ -39,9 +40,17 @@ export class HudManager {
     this.hudEl.classList.remove('active');
   }
 
+  /**
+   * Set the score limit for display in the HUD. Called once when transitioning
+   * from lobby to game, using the value the host configured.
+   */
+  setScoreLimit(limit: number): void {
+    this.scoreLimit = limit;
+  }
+
   updateScores(scores: Record<Team, number>): void {
-    this.scoreRedEl.textContent = `${scores.red} / ${SCORE_LIMIT}`;
-    this.scoreBlueEl.textContent = `${scores.blue} / ${SCORE_LIMIT}`;
+    this.scoreRedEl.textContent = `${scores.red} / ${this.scoreLimit}`;
+    this.scoreBlueEl.textContent = `${scores.blue} / ${this.scoreLimit}`;
     this.lastScores = { ...scores };
   }
 

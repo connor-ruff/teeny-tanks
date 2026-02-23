@@ -8,7 +8,9 @@ import {
   ClientToServerEvents,
   ServerToClientEvents,
   TICK_INTERVAL,
-  SCORE_LIMIT,
+  SCORE_LIMIT_DEFAULT,
+  SCORE_LIMIT_MIN,
+  SCORE_LIMIT_MAX,
 } from '@teeny-tanks/shared';
 import { createTank } from './entities/Tank.js';
 import { createFlag } from './entities/Flag.js';
@@ -41,6 +43,9 @@ export class GameRoom {
 
   /** Whether the game has been started (prevents re-starting) */
   private gameStarted = false;
+
+  /** Configurable score limit — host can change this in the lobby */
+  private scoreLimit: number = SCORE_LIMIT_DEFAULT;
 
   constructor(
     private io: Server<ClientToServerEvents, ServerToClientEvents>,
@@ -99,6 +104,17 @@ export class GameRoom {
       if (!target) return;
 
       target.team = team;
+      this.broadcastLobbyState();
+    });
+
+    // Host can change the score limit during the lobby phase
+    socket.on('setScoreLimit', ({ scoreLimit }) => {
+      if (socket.id !== this.hostId) return;
+      if (this.gameStarted) return;
+
+      // Clamp to valid range to prevent invalid values
+      const clamped = Math.max(SCORE_LIMIT_MIN, Math.min(SCORE_LIMIT_MAX, Math.floor(scoreLimit)));
+      this.scoreLimit = clamped;
       this.broadcastLobbyState();
     });
 
@@ -209,6 +225,7 @@ export class GameRoom {
       roomCode: this.roomCode,
       hostId: this.hostId!,
       players: this.lobbyPlayers,
+      scoreLimit: this.scoreLimit,
     };
     this.io.to(this.roomCode).emit('lobbyUpdate', state);
   }
@@ -236,7 +253,7 @@ export class GameRoom {
         console.log(`[${this.roomCode}] Team ${capture.team} scored! (${this.state.scores.red} - ${this.state.scores.blue})`);
 
         // Check win condition after each capture
-        if (this.state.scores[capture.team] >= SCORE_LIMIT) {
+        if (this.state.scores[capture.team] >= this.scoreLimit) {
           this.io.to(this.roomCode).emit('gameOver', { winner: capture.team });
           console.log(`[${this.roomCode}] Game over — ${capture.team} wins!`);
           this.stop();
