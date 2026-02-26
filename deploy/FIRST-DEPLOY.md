@@ -47,7 +47,7 @@ Without this, your instance's IP changes whenever it restarts.
 1. In the Lightsail sidebar, click **Networking**.
 2. Click **Create static IP**.
 3. Attach it to your `teeny-tanks` instance.
-4. Note the static IP address — this is the address players will use to reach your game.
+4. Note the static IP address — this is the address players will use to reach your game. (54.196.95.235)
 
 ---
 
@@ -126,7 +126,7 @@ Replace the URL below with your actual GitHub repo URL.
 
 ```bash
 cd ~
-git clone https://github.com/YOUR_USERNAME/teeny-tanks.git
+git clone https://github.com/connor-ruff/teeny-tanks.git
 cd teeny-tanks
 ```
 
@@ -197,10 +197,10 @@ sudo nano /etc/nginx/sites-available/teeny-tanks
 
 Paste the following, then save and exit (Ctrl+O, Enter, Ctrl+X):
 
-```nginx
+```
 server {
     listen 80;
-    server_name _;
+     server_name _;
 
     # Serve the compiled Vite client bundle
     root /home/ubuntu/teeny-tanks/packages/client/dist;
@@ -212,7 +212,7 @@ server {
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
+        proxy_set_header Host $host;X
         proxy_set_header X-Real-IP $remote_addr;
         proxy_cache_bypass $http_upgrade;
     }
