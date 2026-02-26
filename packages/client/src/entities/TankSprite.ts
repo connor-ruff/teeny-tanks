@@ -1,4 +1,4 @@
-import { TankState, TANK_WIDTH, TANK_HEIGHT, LERP_SPEED, SNAP_THRESHOLD } from '@teeny-tanks/shared';
+import { TankState, TANK_WIDTH, TANK_HEIGHT, LERP_SPEED, SNAP_THRESHOLD, Team } from '@teeny-tanks/shared';
 
 // Pencil-box team color palettes (muted, crayon-like)
 const TEAM_COLORS = {
@@ -17,12 +17,17 @@ const TEAM_COLORS = {
 const COLOR_OUTLINE = 0x2c2c2c;
 const COLOR_BARREL = 0x6b6358;
 const COLOR_BARREL_TIP = 0x2c2c2c;
-const COLOR_FLAG_INDICATOR = 0xc9a84c;
 const COLOR_DEAD_TINT = 0xa09888;
+const COLOR_FLAG_POLE = 0x6b6358;
 
 export class TankSprite {
   private bodyGraphics: Phaser.GameObjects.Graphics;
   private turretGraphics: Phaser.GameObjects.Graphics;
+  // Separate graphics layer for the flag-carrier indicator — drawn in world space
+  // (not rotated with the tank) so the mini flag always points up
+  private flagIndicatorGraphics: Phaser.GameObjects.Graphics;
+  // Pulsing aura ring drawn beneath the tank to highlight flag carriers
+  private auraGraphics: Phaser.GameObjects.Graphics;
   private targetX: number;
   private targetY: number;
   private targetRotation: number;
@@ -39,7 +44,11 @@ export class TankSprite {
     this.targetY = state.y;
     this.targetRotation = state.rotation;
 
-    // Body graphics: chassis, treads, rivets, flag indicator
+    // Aura ring drawn first (behind everything else)
+    this.auraGraphics = scene.add.graphics();
+    this.auraGraphics.setPosition(state.x, state.y);
+
+    // Body graphics: chassis, treads, rivets
     this.bodyGraphics = scene.add.graphics();
     this.bodyGraphics.setPosition(state.x, state.y);
 
@@ -47,6 +56,10 @@ export class TankSprite {
     // This architecture allows independent turret aim in the future.
     this.turretGraphics = scene.add.graphics();
     this.turretGraphics.setPosition(state.x, state.y);
+
+    // Flag indicator graphics: mini flag + label drawn in world space (no rotation)
+    this.flagIndicatorGraphics = scene.add.graphics();
+    this.flagIndicatorGraphics.setPosition(state.x, state.y);
 
     // Player name label above tank
     const labelText = isLocal ? `${state.displayName} (YOU)` : state.displayName;
@@ -159,13 +172,6 @@ export class TankSprite {
     this.bodyGraphics.fillCircle(-rv.x, rv.y, 2);
     this.bodyGraphics.fillCircle(rv.x, rv.y, 2);
 
-    // Flag indicator: static goldenrod dot with dark outline above the tank
-    if (state.hasFlag) {
-      this.bodyGraphics.fillStyle(COLOR_FLAG_INDICATOR, 1);
-      this.bodyGraphics.fillCircle(0, -TANK_HEIGHT / 2 - 10, 5);
-      this.bodyGraphics.lineStyle(2, COLOR_OUTLINE, 1);
-      this.bodyGraphics.strokeCircle(0, -TANK_HEIGHT / 2 - 10, 5);
-    }
   }
 
   private drawTurret(state: TankState): void {
@@ -215,9 +221,95 @@ export class TankSprite {
     this.turretGraphics.fillEllipse(-2, -2, 6, 4);
   }
 
+  /**
+   * Draw a pulsing aura ring beneath the tank when carrying the flag.
+   * Uses a time-based sine wave so the glow throbs smoothly even at 20Hz tick rate.
+   * The aura uses the ENEMY team's color (you carry the enemy flag).
+   */
+  private drawAura(state: TankState): void {
+    this.auraGraphics.clear();
+
+    if (!state.alive || !state.hasFlag) return;
+
+    const enemyTeam: Team = state.team === 'red' ? 'blue' : 'red';
+    const enemyColor = TEAM_COLORS[enemyTeam].fill;
+
+    // Sine pulse: oscillates between 0.15 and 0.5 alpha over ~1.2 seconds
+    const pulse = Math.sin(Date.now() * 0.005) * 0.5 + 0.5; // 0..1
+    const alpha = 0.15 + pulse * 0.35;
+    const radius = TANK_WIDTH * 0.9 + pulse * 4; // subtle size throb
+
+    // Outer glow ring
+    this.auraGraphics.lineStyle(3, enemyColor, alpha);
+    this.auraGraphics.strokeCircle(0, 0, radius);
+
+    // Inner soft fill
+    this.auraGraphics.fillStyle(enemyColor, alpha * 0.25);
+    this.auraGraphics.fillCircle(0, 0, radius);
+
+    // Second thinner ring slightly larger for a "double ring" hand-drawn feel
+    this.auraGraphics.lineStyle(1, enemyColor, alpha * 0.5);
+    this.auraGraphics.strokeCircle(0, 0, radius + 4);
+  }
+
+  /**
+   * Draw a miniature flag graphic to the right side of the tank when carrying
+   * the enemy flag. Drawn in world space (no rotation) so it always appears
+   * upright. The flag matches the enemy team's color to clearly show WHICH
+   * flag was captured.
+   */
+  private drawFlagIndicator(state: TankState): void {
+    this.flagIndicatorGraphics.clear();
+
+    if (!state.alive || !state.hasFlag) return;
+
+    const enemyTeam: Team = state.team === 'red' ? 'blue' : 'red';
+    const colors = TEAM_COLORS[enemyTeam];
+
+    // Position the flag to the right of the tank body, vertically centered.
+    // This avoids the name label (which sits above at y - 30) and the turret.
+    const flagX = TANK_WIDTH / 2 + 6;
+    const poleHeight = 18;
+    const poleTopY = -poleHeight / 2;
+
+    // Gentle bob animation: flag floats up and down ~2px
+    const bob = Math.sin(Date.now() * 0.004) * 2;
+    const oY = poleTopY + bob;
+
+    // Flag pole (warm grey-brown, same as FlagSprite)
+    this.flagIndicatorGraphics.fillStyle(COLOR_FLAG_POLE, 1);
+    this.flagIndicatorGraphics.fillRect(flagX - 1, oY, 2, poleHeight);
+
+    // Pole cap
+    this.flagIndicatorGraphics.fillStyle(0xf5f0e8, 1);
+    this.flagIndicatorGraphics.fillCircle(flagX, oY, 1.5);
+
+    // Flag pennant triangle (enemy team color) — extends to the right of the pole
+    this.flagIndicatorGraphics.fillStyle(colors.fill, 1);
+    this.flagIndicatorGraphics.fillTriangle(
+      flagX + 1, oY,
+      flagX + 1, oY + 10,
+      flagX + 14, oY + 5,
+    );
+
+    // Pennant outline
+    this.flagIndicatorGraphics.lineStyle(1, colors.fillDark, 0.8);
+    this.flagIndicatorGraphics.strokeTriangle(
+      flagX + 1, oY,
+      flagX + 1, oY + 10,
+      flagX + 14, oY + 5,
+    );
+
+    // Pole base mark: small horizontal bar at the bottom of the pole
+    this.flagIndicatorGraphics.fillStyle(colors.fill, 0.9);
+    this.flagIndicatorGraphics.fillRect(flagX - 3, oY + poleHeight, 6, 2);
+  }
+
   private draw(state: TankState): void {
+    this.drawAura(state);
     this.drawBody(state);
     this.drawTurret(state);
+    this.drawFlagIndicator(state);
   }
 
   syncTo(state: TankState): void {
@@ -242,21 +334,28 @@ export class TankSprite {
       newY = currentY + dy * LERP_SPEED;
     }
 
+    // Aura drawn at tank center, no rotation (circle is rotationally symmetric anyway)
+    this.auraGraphics.setPosition(newX, newY);
+
     this.bodyGraphics.setPosition(newX, newY);
     this.bodyGraphics.rotation = this.targetRotation;
 
     this.turretGraphics.setPosition(newX, newY);
     this.turretGraphics.rotation = this.targetRotation;
 
-    // Label stays above tank in world space, not rotated with the tank
+    // Flag indicator and label stay in world space — no rotation so they remain upright
+    this.flagIndicatorGraphics.setPosition(newX, newY);
+
     this.label.setPosition(newX, newY - 30);
 
     this.draw(state);
   }
 
   destroy(): void {
+    this.auraGraphics.destroy();
     this.bodyGraphics.destroy();
     this.turretGraphics.destroy();
+    this.flagIndicatorGraphics.destroy();
     this.label.destroy();
   }
 }

@@ -6,7 +6,7 @@ import {
   CAPTURE_ZONES,
 } from '@teeny-tanks/shared';
 import { resetFlag } from '../entities/Flag.js';
-import { respawnTank } from '../entities/Tank.js';
+import { resetTankToSpawn } from '../entities/Tank.js';
 
 export interface FlagEvents {
   captures: Array<{ team: Team; playerId: string }>;
@@ -40,7 +40,7 @@ export function updateFlags(state: GameState): FlagEvents {
           const resetSlots: Record<string, number> = { red: 0, blue: 0 };
           for (const tank of Object.values(state.tanks)) {
             const slot = resetSlots[tank.team]++;
-            respawnTank(tank, slot);
+            resetTankToSpawn(tank, slot);
           }
 
           // Reset both flags to their bases

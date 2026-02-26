@@ -9,18 +9,18 @@ export const ARENA_WIDTH = ACTIVE_MAP.width;
 export const ARENA_HEIGHT = ACTIVE_MAP.height;
 
 // Tank
-export const TANK_SPEED = 150; // pixels per second
+export const TANK_SPEED = 135; // pixels per second
 export const TANK_REVERSE_MULTIPLIER = 0.8; // reverse is slower than forward (fraction of TANK_SPEED)
-export const TANK_ROTATION_SPEED = 2; // radians per second
+export const TANK_ROTATION_SPEED = 1.8; // radians per second
 export const TANK_WIDTH = 35;
 export const TANK_HEIGHT = 26;
 export const TANK_SHOOT_COOLDOWN = 500; // ms
 export const TANK_COLLISION_RADIUS = 17; // circular approximation for tank-to-tank collision
 export const TANK_PUSH_FACTOR = 0.35;   // fraction of overlap transferred to dragged tank
-export const TANK_RESPAWN_DELAY = 2000; // ms — cooldown before destroyed tank reappears
+export const TANK_RESPAWN_DELAY = 3500; // ms — cooldown before destroyed tank reappears
 
 // Projectile
-export const PROJECTILE_SPEED = 300; // pixels per second
+export const PROJECTILE_SPEED = 250; // pixels per second
 export const PROJECTILE_RADIUS = 4;
 export const PROJECTILE_LIFETIME = 2500; // ms
 export const PROJECTILE_SPAWN_OFFSET = 5; // px — extra gap between tank edge and spawned bullet
@@ -66,6 +66,13 @@ function buildSpawnSlots(
 export const SPAWN_POSITIONS = {
   red: buildSpawnSlots(ARENA_WIDTH / 2, FLAG_BASE_INSET, 1),
   blue: buildSpawnSlots(ARENA_WIDTH / 2, ARENA_HEIGHT - FLAG_BASE_INSET, -1),
+};
+
+// Respawn positions — two corners per team, sourced from the active map.
+// On death, the server randomly picks one of these for the destroyed tank.
+export const RESPAWN_POSITIONS = {
+  red: ACTIVE_MAP.redRespawnPositions,
+  blue: ACTIVE_MAP.blueRespawnPositions,
 };
 
 // Flag positions (each team's flag is at their base)

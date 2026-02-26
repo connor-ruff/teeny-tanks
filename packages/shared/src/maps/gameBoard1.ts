@@ -26,4 +26,20 @@ export const GAME_BOARD_1: MapDefinition = {
     { x: 0, y: 300, width: 200, height: 250 },   // Left barrier (in middle of arena)
     { x: 300, y: 300, width: 200, height: 250 },   // Right barrier (in middle of arena)
   ],
+
+  // Respawn positions — two corners per team (left, right) on their side of the map.
+  // Placed ~1/6 from each side edge, behind (further from center than) the flag.
+  // Red team is at the top (low Y), blue team at the bottom (high Y).
+  //
+  //   Map width = 500  →  1/6 ≈ 83px from each side edge
+  //   Red Y = 40 (above the flag at y=80, safely in their back zone)
+  //   Blue Y = 810 (below the flag at y=770, safely in their back zone)
+  redRespawnPositions: [
+    { x: 83, y: 40 },   // top-left corner
+    { x: 417, y: 40 },  // top-right corner
+  ],
+  blueRespawnPositions: [
+    { x: 83, y: 810 },  // bottom-left corner
+    { x: 417, y: 810 }, // bottom-right corner
+  ],
 };
