@@ -1,4 +1,4 @@
-import { TankState, TANK_WIDTH, TANK_HEIGHT, LERP_SPEED, SNAP_THRESHOLD, Team } from '@teeny-tanks/shared';
+import { TankStateWire, TANK_WIDTH, TANK_HEIGHT, LERP_SPEED, SNAP_THRESHOLD, Team } from '@teeny-tanks/shared';
 
 // Pencil-box team color palettes (muted, crayon-like)
 const TEAM_COLORS = {
@@ -36,7 +36,7 @@ export class TankSprite {
 
   constructor(
     private scene: Phaser.Scene,
-    state: TankState,
+    state: TankStateWire,
     isLocal: boolean,
   ) {
     this.isLocal = isLocal;
@@ -76,7 +76,7 @@ export class TankSprite {
     this.draw(state);
   }
 
-  private drawBody(state: TankState): void {
+  private drawBody(state: TankStateWire): void {
     this.bodyGraphics.clear();
 
     if (!state.alive) {
@@ -174,7 +174,7 @@ export class TankSprite {
 
   }
 
-  private drawTurret(state: TankState): void {
+  private drawTurret(state: TankStateWire): void {
     this.turretGraphics.clear();
 
     if (!state.alive) {
@@ -226,7 +226,7 @@ export class TankSprite {
    * Uses a time-based sine wave so the glow throbs smoothly even at 20Hz tick rate.
    * The aura uses the ENEMY team's color (you carry the enemy flag).
    */
-  private drawAura(state: TankState): void {
+  private drawAura(state: TankStateWire): void {
     this.auraGraphics.clear();
 
     if (!state.alive || !state.hasFlag) return;
@@ -258,7 +258,7 @@ export class TankSprite {
    * upright. The flag matches the enemy team's color to clearly show WHICH
    * flag was captured.
    */
-  private drawFlagIndicator(state: TankState): void {
+  private drawFlagIndicator(state: TankStateWire): void {
     this.flagIndicatorGraphics.clear();
 
     if (!state.alive || !state.hasFlag) return;
@@ -305,7 +305,7 @@ export class TankSprite {
     this.flagIndicatorGraphics.fillRect(flagX - 3, oY + poleHeight, 6, 2);
   }
 
-  private draw(state: TankState): void {
+  private draw(state: TankStateWire): void {
     this.drawAura(state);
     this.drawBody(state);
     this.drawTurret(state);
@@ -320,7 +320,7 @@ export class TankSprite {
     return this.bodyGraphics.y;
   }
 
-  syncTo(state: TankState): void {
+  syncTo(state: TankStateWire): void {
     this.targetX = state.x;
     this.targetY = state.y;
     this.targetRotation = state.rotation;

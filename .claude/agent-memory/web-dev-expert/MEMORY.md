@@ -27,20 +27,34 @@
 
 ## Game Loop
 - Server-authoritative at 20 ticks/sec (`TICK_RATE = 20`)
-- Systems: PhysicsSystem, ProjectileSystem, FlagSystem (run sequentially each tick)
+- Systems: PhysicsSystem, CollisionSystem, ProjectileSystem, FlagSystem (run sequentially each tick)
 - Client interpolates with lerp (`LERP_SPEED = 0.2`)
 
 ## File Naming
 - Entities: `packages/server/src/entities/` (Tank.ts, Projectile.ts, Flag.ts)
-- Systems: `packages/server/src/systems/` (PhysicsSystem.ts, ProjectileSystem.ts, FlagSystem.ts)
+- Systems: `packages/server/src/systems/` (PhysicsSystem.ts, ProjectileSystem.ts, FlagSystem.ts, CollisionSystem.ts)
 - Client entities: `packages/client/src/entities/` (*Sprite.ts files)
 - Client UI: `packages/client/src/ui/` (RoomScreen.ts, LobbyManager.ts, HudManager.ts)
 
 ## Gameplay Rules (Finalized Specs)
-- 2 teams (Red/Blue), 1–5 players each
-- **Map is VERTICAL**: flags at north/south (top/bottom), NOT east/west — all coordinate logic must use Y-axis for team sides
-- 1 bullet kills any tank (including self/teammates — friendly fire always on)
+- 2 teams (Red/Blue), 1-5 players each
+- **Map is VERTICAL**: flags at north/south (top/bottom), NOT east/west
+- 1 bullet kills any tank (including self/teammates -- friendly fire always on)
 - Bullets bounce off all 4 edges; expire by time OR on tank hit
 - Score = return enemy flag to your flag spawn; map resets instantly on each point
 - End-game: first to target score (configurable, typically 3 or 5); server emits `gameOver` event
 - Respawn: near home base after brief cooldown
+
+## Performance Findings (Feb 2026)
+- See `performance-analysis.md` for full optimization plan
+- Biggest issues: full gameState broadcast every tick, no WS-only transport, no nginx gzip
+- Client bundle is 1.5 MB (360 KB gzipped), dominated by Phaser 3
+- All client entities use Graphics primitives (clear+redraw every tick) -- should use textures
+- Arcade physics loaded but unused (all physics are server-side)
+- Deploy: PM2 + nginx on Lightsail, nginx config missing gzip directives
+
+## Deploy Info
+- AWS Lightsail, Ubuntu 22.04, recommended $10/month (1GB RAM, 2 vCPU)
+- PM2 manages the Node.js server process
+- nginx serves static client files + proxies /socket.io/ to :3001
+- `deploy/redeploy.sh` for updates

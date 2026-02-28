@@ -1,4 +1,4 @@
-import { ProjectileState, PROJECTILE_RADIUS } from '@teeny-tanks/shared';
+import { ProjectileStateWire, PROJECTILE_RADIUS } from '@teeny-tanks/shared';
 
 const COLOR_BULLET_CORE = 0xf5f0e8;
 const COLOR_BULLET_OUTER = 0x2c2c2c;
@@ -11,7 +11,7 @@ export class ProjectileSprite {
 
   constructor(
     private scene: Phaser.Scene,
-    state: ProjectileState,
+    state: ProjectileStateWire,
   ) {
     this.graphics = scene.add.graphics();
     this.prevX = state.x;
@@ -46,7 +46,7 @@ export class ProjectileSprite {
     this.graphics.fillCircle(x, y, PROJECTILE_RADIUS - 1);
   }
 
-  syncTo(state: ProjectileState): void {
+  syncTo(state: ProjectileStateWire): void {
     this.drawAt(state.x, state.y);
     this.prevX = state.x;
     this.prevY = state.y;

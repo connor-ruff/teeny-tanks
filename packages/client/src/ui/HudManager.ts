@@ -1,4 +1,4 @@
-import { GameState, Team, SCORE_LIMIT_DEFAULT } from '@teeny-tanks/shared';
+import { Team, SCORE_LIMIT_DEFAULT } from '@teeny-tanks/shared';
 
 const KILL_FEED_MAX = 5;
 const KILL_FEED_DURATION = 4000;

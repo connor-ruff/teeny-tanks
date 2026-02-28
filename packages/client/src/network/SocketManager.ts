@@ -3,7 +3,7 @@ import {
   ClientToServerEvents,
   ServerToClientEvents,
   PlayerInput,
-  GameState,
+  GameStateWireWire,
   Team,
   LobbyState,
 } from '@teeny-tanks/shared';
@@ -20,9 +20,9 @@ export class SocketManager {
   public playerId: string | null = null;
   public team: Team | null = null;
   public roomCode: string | null = null;
-  public latestState: GameState | null = null;
+  public latestState: GameStateWire | null = null;
 
-  private onStateCallbacks: Array<(state: GameState) => void> = [];
+  private onStateCallbacks: Array<(state: GameStateWire) => void> = [];
   private onAssignCallbacks: Array<(data: { playerId: string; team: Team }) => void> = [];
   private onKillCallbacks: Array<(data: { killerId: string; victimId: string }) => void> = [];
   private onFlagCaptureCallbacks: Array<(data: { team: Team; playerId: string }) => void> = [];
@@ -39,7 +39,7 @@ export class SocketManager {
   constructor() {
     // Connect to the current page origin so this works in both dev (Vite proxy)
     // and production (nginx proxy). No hardcoded host/port needed.
-    this.socket = io();
+    this.socket = io({ transports: ['websocket'] });
 
     // Room events
     this.socket.on('roomCreated', (data) => {
@@ -155,7 +155,7 @@ export class SocketManager {
     this.onGameStartedCallbacks.push(cb);
   }
 
-  onState(cb: (state: GameState) => void): void {
+  onState(cb: (state: GameStateWire) => void): void {
     this.onStateCallbacks.push(cb);
   }
 

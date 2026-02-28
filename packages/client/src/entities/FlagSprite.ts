@@ -1,4 +1,4 @@
-import { FlagState, FLAG_RADIUS, CAPTURE_ZONES, CAPTURE_ZONE_RADIUS, Team } from '@teeny-tanks/shared';
+import { FlagStateWire, FLAG_RADIUS, CAPTURE_ZONES, CAPTURE_ZONE_RADIUS, Team } from '@teeny-tanks/shared';
 
 // Pencil-box team colors (muted, crayon-like)
 const TEAM_COLORS = {
@@ -49,7 +49,7 @@ export class FlagSprite {
     this.graphics = scene.add.graphics();
   }
 
-  syncTo(state: FlagState): void {
+  syncTo(state: FlagStateWire): void {
     this.graphics.clear();
 
     // Don't draw flag if it's being carried (shown as indicator on tank)

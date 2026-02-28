@@ -31,14 +31,18 @@ export const GAME_BOARD: MapDefinition = {
     { x: 395,  y: 130, width: 10, height: 85},  // Vertical barrier right under flag
     { x: 180,  y: 0,   width: 10, height: 190}, // Vertical barrier to the left of the north flag
     { x: 610,  y: 0,   width: 10, height: 190}, // Vertical barrier to the right of the north flag
+    { x: 180,  y:280,  width: 50, height: 10}, // Small horiz bar extending from left; north flag
+    { x: 570,  y:280,  width: 50, height: 10}, // Small horiz bar extending from right; north flag
 
     { x: 0,  y: 800, width: 180, height: 120},   // Left barrier in front of south flag
     { x: 620,  y: 800, width: 180, height: 120},   // Right barrier in front of south flag
     { x: 270,  y: 1070, width: 260, height: 10},  // First horiz barrier in front of south flag
     { x: 335,  y: 910, width: 130, height: 10},  // Second horiz barrier in front of south flag
-    { x: 395,  y: 920, width: 10, height: 85},  // Vertical barrier right under flag
+    { x: 395,  y: 985, width: 10, height: 85},  // Vertical barrier right under flag
     { x: 180,  y: 1010,   width: 10, height: 190}, // Vertical barrier to the left of the south flag
     { x: 610,  y: 1010,   width: 10, height: 190}, // Vertical barrier to the right of the south flag
+    { x: 180,  y: 910,  width: 50, height: 10}, // Small horiz bar extending from left; south flag
+    { x: 570,  y: 910,  width: 50, height: 10}, // Small horiz bar extending from right; south flag
   ],
 
   // Respawn positions — two corners per team (left, right) on their side of the map.

@@ -18,6 +18,9 @@ const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
     origin: '*',
     methods: ['GET', 'POST'],
   },
+  // Skip HTTP long-polling handshake — go straight to WebSocket.
+  // Reduces connection latency and CPU overhead on small instances.
+  transports: ['websocket'],
 });
 
 const roomManager = new RoomManager(io);

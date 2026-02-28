@@ -1,6 +1,7 @@
 import { Server, Socket } from 'socket.io';
 import {
   GameState,
+  GameStateWire,
   PlayerInput,
   Team,
   LobbyPlayer,
@@ -263,11 +264,57 @@ export class GameRoom {
 
       this.state.tick++;
 
-      // Broadcast state only to players in this room
-      this.io.to(this.roomCode).emit('gameState', this.state);
+      // Broadcast slim state — only fields the client needs for rendering
+      this.io.to(this.roomCode).emit('gameState', this.serializeState());
     }, TICK_INTERVAL);
 
     console.log(`[${this.roomCode}] Game loop started at ${1000 / TICK_INTERVAL} ticks/sec`);
+  }
+
+  /** Strip server-only fields from the game state before sending over the wire. */
+  private serializeState(): GameStateWire {
+    const tanks: GameStateWire['tanks'] = {};
+    for (const [id, t] of Object.entries(this.state.tanks)) {
+      tanks[id] = {
+        id: t.id,
+        team: t.team,
+        displayName: t.displayName,
+        x: t.x,
+        y: t.y,
+        rotation: t.rotation,
+        alive: t.alive,
+        hasFlag: t.hasFlag,
+      };
+    }
+
+    const projectiles: GameStateWire['projectiles'] = this.state.projectiles.map(p => ({
+      id: p.id,
+      x: p.x,
+      y: p.y,
+    }));
+
+    const flags: GameStateWire['flags'] = {
+      red: {
+        team: this.state.flags.red.team,
+        x: this.state.flags.red.x,
+        y: this.state.flags.red.y,
+        carrierId: this.state.flags.red.carrierId,
+      },
+      blue: {
+        team: this.state.flags.blue.team,
+        x: this.state.flags.blue.x,
+        y: this.state.flags.blue.y,
+        carrierId: this.state.flags.blue.carrierId,
+      },
+    };
+
+    return {
+      tick: this.state.tick,
+      tanks,
+      projectiles,
+      flags,
+      scores: this.state.scores,
+    };
   }
 
   stop(): void {

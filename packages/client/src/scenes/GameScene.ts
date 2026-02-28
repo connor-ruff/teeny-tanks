@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GameState, ARENA_WIDTH, ARENA_HEIGHT, TICK_INTERVAL, Team, ACTIVE_MAP } from '@teeny-tanks/shared';
+import { GameStateWireWire, ARENA_WIDTH, ARENA_HEIGHT, TICK_INTERVAL, Team, ACTIVE_MAP } from '@teeny-tanks/shared';
 import { SocketManager } from '../network/SocketManager.js';
 import { HudManager } from '../ui/HudManager.js';
 import { InputManager } from '../input/InputManager.js';
@@ -49,7 +49,7 @@ export class GameScene extends Phaser.Scene {
     this.flagSprites.set('blue', new FlagSprite(this, 'blue'));
 
     // Handle state updates
-    this.socketManager.onState((state: GameState) => {
+    this.socketManager.onState((state: GameStateWire) => {
       this.syncState(state);
     });
 
@@ -185,7 +185,7 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private syncState(state: GameState): void {
+  private syncState(state: GameStateWire): void {
     const localId = this.socketManager.playerId;
 
     // Update/create tanks

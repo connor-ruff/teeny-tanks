@@ -200,7 +200,19 @@ Paste the following, then save and exit (Ctrl+O, Enter, Ctrl+X):
 ```
 server {
     listen 80;
-     server_name _;
+    server_name _;
+
+    # Enable gzip compression — big win for the ~1.5 MB JS bundle
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml;
+    gzip_min_length 256;
+
+    # Cache static assets (JS/CSS have content hashes from Vite, safe to cache long)
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff2?)$ {
+        root /home/ubuntu/teeny-tanks/packages/client/dist;
+        expires 7d;
+        add_header Cache-Control "public, immutable";
+    }
 
     # Serve the compiled Vite client bundle
     root /home/ubuntu/teeny-tanks/packages/client/dist;
@@ -212,7 +224,7 @@ server {
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;X
+        proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_cache_bypass $http_upgrade;
     }

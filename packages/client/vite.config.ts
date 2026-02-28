@@ -12,4 +12,15 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    // Split Phaser into its own chunk so it caches independently from game code.
+    // Phaser is ~1.4 MB and rarely changes — players download it once.
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          phaser: ['phaser'],
+        },
+      },
+    },
+  },
 });

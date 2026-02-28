@@ -46,6 +46,40 @@ export interface GameState {
   scores: Record<Team, number>;
 }
 
+// ── Slim wire types — only the fields the client needs for rendering ──
+
+export interface TankStateWire {
+  id: string;
+  team: Team;
+  displayName: string;
+  x: number;
+  y: number;
+  rotation: number;
+  alive: boolean;
+  hasFlag: boolean;
+}
+
+export interface ProjectileStateWire {
+  id: string;
+  x: number;
+  y: number;
+}
+
+export interface FlagStateWire {
+  team: Team;
+  x: number;
+  y: number;
+  carrierId: string | null;
+}
+
+export interface GameStateWire {
+  tick: number;
+  tanks: Record<string, TankStateWire>;
+  projectiles: ProjectileStateWire[];
+  flags: Record<Team, FlagStateWire>;
+  scores: Record<Team, number>;
+}
+
 export interface PlayerInput {
   tick: number;
   up: boolean;
@@ -97,7 +131,7 @@ export interface ServerToClientEvents {
   lobbyUpdate: (state: LobbyState) => void;
   /** Signals all clients to transition from lobby into the game */
   gameStarted: () => void;
-  gameState: (state: GameState) => void;
+  gameState: (state: GameStateWire) => void;
   playerAssignment: (data: { playerId: string; team: Team }) => void;
   flagCaptured: (data: { team: Team; playerId: string }) => void;
   playerKilled: (data: { killerId: string; victimId: string }) => void;
