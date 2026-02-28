@@ -30,6 +30,14 @@ socketManager.onRoomCreated((data) => {
   lobbyManager.setLocalPlayerId(socketManager.playerId!);
   lobbyManager.setRoomCode(data.code);
   lobbyManager.show();
+
+  // The server broadcasts lobbyUpdate BEFORE emitting roomCreated (inside
+  // addPlayer), so the first lobbyUpdate may have arrived when localPlayerId
+  // was still null — causing isHost to evaluate as false. Replay the cached
+  // lobby state now that the player ID is set so the host UI renders correctly.
+  if (socketManager.latestLobbyState) {
+    lobbyManager.updateLobby(socketManager.latestLobbyState);
+  }
 });
 
 // When successfully joined an existing room, transition to the lobby
@@ -38,6 +46,12 @@ socketManager.onRoomJoined((data) => {
   lobbyManager.setLocalPlayerId(socketManager.playerId!);
   lobbyManager.setRoomCode(data.code);
   lobbyManager.show();
+
+  // Same replay logic as roomCreated — the lobbyUpdate for the join may have
+  // arrived before playerId was set, so re-render to pick up correct state.
+  if (socketManager.latestLobbyState) {
+    lobbyManager.updateLobby(socketManager.latestLobbyState);
+  }
 });
 
 // Show errors on the room screen (e.g. invalid room code)
@@ -83,7 +97,7 @@ socketManager.onAssignment((_data) => {
 
 // Show victory screen when a team reaches the score limit
 socketManager.onGameOver((data) => {
-  hudManager.showGameOver(data.winner);
+  hudManager.showGameOver(data.winner, data.scores);
 });
 
 // Phaser game config

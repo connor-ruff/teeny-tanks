@@ -254,7 +254,7 @@ export class GameRoom {
 
         // Check win condition after each capture
         if (this.state.scores[capture.team] >= this.scoreLimit) {
-          this.io.to(this.roomCode).emit('gameOver', { winner: capture.team });
+          this.io.to(this.roomCode).emit('gameOver', { winner: capture.team, scores: { ...this.state.scores } });
           console.log(`[${this.roomCode}] Game over — ${capture.team} wins!`);
           this.stop();
           return;

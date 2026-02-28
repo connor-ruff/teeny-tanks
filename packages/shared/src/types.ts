@@ -102,5 +102,5 @@ export interface ServerToClientEvents {
   flagCaptured: (data: { team: Team; playerId: string }) => void;
   playerKilled: (data: { killerId: string; victimId: string }) => void;
   /** Broadcast when a team reaches the score limit; game loop stops after this */
-  gameOver: (data: { winner: Team }) => void;
+  gameOver: (data: { winner: Team; scores: { red: number; blue: number } }) => void;
 }

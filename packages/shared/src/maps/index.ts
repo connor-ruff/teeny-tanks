@@ -6,4 +6,4 @@
 //   ClassicSimpleBoard  →  GAME_BOARD  (two flag barriers, open midfield)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export { GAME_BOARD as ACTIVE_MAP } from './ClassicSimpleBoard.js';
+export { GAME_BOARD as ACTIVE_MAP } from './ClassicBoard.js';

@@ -108,13 +108,13 @@ export class HudManager {
   /**
    * Show the game-over victory overlay when a team reaches the score limit.
    */
-  showGameOver(winner: Team): void {
+  showGameOver(winner: Team, scores: { red: number; blue: number }): void {
     const titleEl = document.getElementById('game-over-title')!;
     const scoreEl = document.getElementById('game-over-score')!;
 
     titleEl.textContent = winner === 'red' ? 'Red Team Wins!' : 'Blue Team Wins!';
     titleEl.className = `game-over-title ${winner}`;
-    scoreEl.textContent = `${this.lastScores.red} — ${this.lastScores.blue}`;
+    scoreEl.textContent = `${scores.red} — ${scores.blue}`;
 
     this.gameOverEl.classList.remove('hidden');
   }

@@ -26,12 +26,15 @@ export class SocketManager {
   private onAssignCallbacks: Array<(data: { playerId: string; team: Team }) => void> = [];
   private onKillCallbacks: Array<(data: { killerId: string; victimId: string }) => void> = [];
   private onFlagCaptureCallbacks: Array<(data: { team: Team; playerId: string }) => void> = [];
-  private onGameOverCallbacks: Array<(data: { winner: Team }) => void> = [];
+  private onGameOverCallbacks: Array<(data: { winner: Team; scores: { red: number; blue: number } }) => void> = [];
   private onRoomCreatedCallbacks: Array<(data: { code: string }) => void> = [];
   private onRoomJoinedCallbacks: Array<(data: { code: string }) => void> = [];
   private onRoomErrorCallbacks: Array<(data: { message: string }) => void> = [];
   private onLobbyUpdateCallbacks: Array<(state: LobbyState) => void> = [];
   private onGameStartedCallbacks: Array<() => void> = [];
+
+  /** Most recent lobby state — cached so late subscribers (e.g. after roomCreated) can replay it */
+  public latestLobbyState: LobbyState | null = null;
 
   constructor() {
     // Connect to the current page origin so this works in both dev (Vite proxy)
@@ -60,6 +63,7 @@ export class SocketManager {
 
     // Lobby events
     this.socket.on('lobbyUpdate', (state) => {
+      this.latestLobbyState = state;
       for (const cb of this.onLobbyUpdateCallbacks) cb(state);
     });
 
@@ -167,7 +171,7 @@ export class SocketManager {
     this.onFlagCaptureCallbacks.push(cb);
   }
 
-  onGameOver(cb: (data: { winner: Team }) => void): void {
+  onGameOver(cb: (data: { winner: Team; scores: { red: number; blue: number } }) => void): void {
     this.onGameOverCallbacks.push(cb);
   }
 }

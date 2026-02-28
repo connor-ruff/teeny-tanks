@@ -110,6 +110,28 @@ export class GameScene extends Phaser.Scene {
     zoneGfx.fillStyle(COLOR_BLUE_ZONE, 0.06);
     zoneGfx.fillRect(0, ARENA_HEIGHT - 120, ARENA_WIDTH, 120);
 
+    // Respawn position markers (subtle circles behind everything else)
+    const respawnGfx = this.add.graphics();
+    const RESPAWN_MARKER_RADIUS = 14;
+    const RESPAWN_MARKER_COLOR = 0xc8bfaa; // same warm grey as grid lines
+    const RESPAWN_MARKER_ALPHA = 0.6;
+    for (const pos of ACTIVE_MAP.redRespawnPositions) {
+      respawnGfx.lineStyle(1.5, RESPAWN_MARKER_COLOR, RESPAWN_MARKER_ALPHA);
+      respawnGfx.strokeCircle(pos.x, pos.y, RESPAWN_MARKER_RADIUS);
+      // Small cross-hair inside
+      respawnGfx.lineStyle(1, RESPAWN_MARKER_COLOR, RESPAWN_MARKER_ALPHA * 0.7);
+      respawnGfx.lineBetween(pos.x - 5, pos.y, pos.x + 5, pos.y);
+      respawnGfx.lineBetween(pos.x, pos.y - 5, pos.x, pos.y + 5);
+    }
+    for (const pos of ACTIVE_MAP.blueRespawnPositions) {
+      respawnGfx.lineStyle(1.5, RESPAWN_MARKER_COLOR, RESPAWN_MARKER_ALPHA);
+      respawnGfx.strokeCircle(pos.x, pos.y, RESPAWN_MARKER_RADIUS);
+      // Small cross-hair inside
+      respawnGfx.lineStyle(1, RESPAWN_MARKER_COLOR, RESPAWN_MARKER_ALPHA * 0.7);
+      respawnGfx.lineBetween(pos.x - 5, pos.y, pos.x + 5, pos.y);
+      respawnGfx.lineBetween(pos.x, pos.y - 5, pos.x, pos.y + 5);
+    }
+
     // Center line with horizontal dashes (divides north/south teams)
     const centerGfx = this.add.graphics();
     centerGfx.lineStyle(2, COLOR_CENTER_LINE, 0.6);

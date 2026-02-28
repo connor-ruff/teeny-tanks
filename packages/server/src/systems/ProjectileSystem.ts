@@ -18,6 +18,71 @@ import {
 import { createProjectile } from '../entities/Projectile.js';
 import { respawnTank } from '../entities/Tank.js';
 
+/**
+ * Check if a point is outside the arena bounds.
+ * Uses projectile radius so the entire bullet body must be inside.
+ */
+function isOutOfBounds(x: number, y: number): boolean {
+  return (
+    x - PROJECTILE_RADIUS < 0 ||
+    x + PROJECTILE_RADIUS > ARENA_WIDTH ||
+    y - PROJECTILE_RADIUS < 0 ||
+    y + PROJECTILE_RADIUS > ARENA_HEIGHT
+  );
+}
+
+/**
+ * Check if a point (bullet center) is inside any interior wall rect.
+ * No radius padding here — a bullet whose center is inside a wall
+ * clearly spawned in an invalid position.
+ */
+function isInsideWall(x: number, y: number): boolean {
+  for (const wall of ACTIVE_MAP.walls) {
+    if (
+      x >= wall.x &&
+      x <= wall.x + wall.width &&
+      y >= wall.y &&
+      y <= wall.y + wall.height
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Kill a tank: set it dead, drop any carried flag, and schedule respawn.
+ * Shared by normal projectile hits and self-destruct on invalid bullet spawn.
+ */
+function killTank(
+  tank: TankState,
+  state: GameState,
+  killerId: string,
+  events: ProjectileEvents,
+): void {
+  tank.health = 0;
+  tank.alive = false;
+  events.kills.push({ killerId, victimId: tank.id });
+
+  // If carrying a flag, drop it at current position
+  if (tank.hasFlag) {
+    tank.hasFlag = false;
+    for (const flag of Object.values(state.flags)) {
+      if (flag.carrierId === tank.id) {
+        flag.carrierId = null;
+        flag.x = tank.x;
+        flag.y = tank.y;
+        flag.atBase = false;
+      }
+    }
+  }
+
+  // Respawn after a brief cooldown
+  setTimeout(() => {
+    respawnTank(tank);
+  }, TANK_RESPAWN_DELAY);
+}
+
 function bounceProjectileOffWall(
   proj: ProjectileState,
   wall: WallRect,
@@ -100,6 +165,16 @@ export function updateProjectiles(
       // Spawn projectile at the front of the tank barrel
       const spawnX = tank.x + Math.cos(tank.rotation) * (TANK_WIDTH / 2 + PROJECTILE_SPAWN_OFFSET);
       const spawnY = tank.y + Math.sin(tank.rotation) * (TANK_HEIGHT / 2 + PROJECTILE_SPAWN_OFFSET);
+
+      // If the barrel tip is clipping through a wall or arena edge, the bullet
+      // would realistically ricochet back into the tank instantly — so we destroy
+      // the firing tank instead of spawning an invalid projectile.
+      if (isOutOfBounds(spawnX, spawnY) || isInsideWall(spawnX, spawnY)) {
+        killTank(tank, state, playerId, events);
+        tank.lastShotTime = now;
+        continue;
+      }
+
       const proj = createProjectile(playerId, spawnX, spawnY, tank.rotation, now);
       state.projectiles.push(proj);
       tank.lastShotTime = now;
@@ -163,26 +238,7 @@ export function updateProjectiles(
         tank.health -= 1;
 
         if (tank.health <= 0) {
-          tank.alive = false;
-          events.kills.push({ killerId: proj.ownerId, victimId: tank.id });
-
-          // If carrying a flag, drop it at current position
-          if (tank.hasFlag) {
-            tank.hasFlag = false;
-            for (const flag of Object.values(state.flags)) {
-              if (flag.carrierId === tank.id) {
-                flag.carrierId = null;
-                flag.x = tank.x;
-                flag.y = tank.y;
-                flag.atBase = false;
-              }
-            }
-          }
-
-          // Respawn after a brief cooldown
-          setTimeout(() => {
-            respawnTank(tank);
-          }, TANK_RESPAWN_DELAY);
+          killTank(tank, state, proj.ownerId, events);
         }
         break;
       }

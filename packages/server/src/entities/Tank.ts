@@ -1,16 +1,7 @@
-import { TankState, Team, SPAWN_POSITIONS, RESPAWN_POSITIONS } from '@teeny-tanks/shared';
+import { TankState, Team, RESPAWN_POSITIONS } from '@teeny-tanks/shared';
 
 /**
- * Pick a spawn slot for the given team. Uses slotIndex modulo the number of
- * available slots so it never goes out of bounds.
- */
-function getSpawn(team: Team, slotIndex: number) {
-  const slots = SPAWN_POSITIONS[team];
-  return slots[slotIndex % slots.length];
-}
-
-/**
- * Pick a random respawn corner for the given team.
+ * Pick a random respawn position for the given team.
  * Each team has two corner positions (left and right of their side).
  */
 function getRandomRespawn(team: Team) {
@@ -18,8 +9,8 @@ function getRandomRespawn(team: Team) {
   return positions[Math.floor(Math.random() * positions.length)];
 }
 
-export function createTank(id: string, team: Team, slotIndex: number = 0, displayName: string = ''): TankState {
-  const spawn = getSpawn(team, slotIndex);
+export function createTank(id: string, team: Team, _slotIndex: number = 0, displayName: string = ''): TankState {
+  const spawn = getRandomRespawn(team);
   return {
     id,
     team,
@@ -54,8 +45,8 @@ export function respawnTank(tank: TankState): void {
  * Reset a tank to its original spawn slot position. Used during full map resets
  * (e.g., after a flag capture) where tanks should return to formation, not random corners.
  */
-export function resetTankToSpawn(tank: TankState, slotIndex: number): void {
-  const spawn = getSpawn(tank.team, slotIndex);
+export function resetTankToSpawn(tank: TankState, _slotIndex: number): void {
+  const spawn = getRandomRespawn(tank.team);
   tank.x = spawn.x;
   tank.y = spawn.y;
   tank.rotation = tank.team === 'red' ? Math.PI / 2 : -Math.PI / 2;

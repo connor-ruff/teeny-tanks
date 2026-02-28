@@ -20,7 +20,7 @@ export const TANK_PUSH_FACTOR = 0.35;   // fraction of overlap transferred to dr
 export const TANK_RESPAWN_DELAY = 3500; // ms — cooldown before destroyed tank reappears
 
 // Projectile
-export const PROJECTILE_SPEED = 180; // pixels per second
+export const PROJECTILE_SPEED = 210; // pixels per second
 export const PROJECTILE_RADIUS = 4;
 export const PROJECTILE_LIFETIME = 2500; // ms
 export const PROJECTILE_SPAWN_OFFSET = 5; // px — extra gap between tank edge and spawned bullet
@@ -35,41 +35,9 @@ export const FLAG_BASE_INSET = 80; // px — how far each flag sits from the top
 export const TEAM_RED = 'red' as const;
 export const TEAM_BLUE = 'blue' as const;
 
-// Spawning
-export const SPAWN_DISTANCE_FROM_FLAG = 50; // px — how far spawn slots sit behind each team's flag
-
-// Spawn positions (vertical layout — red at top/north, blue at bottom/south).
-// Each team has up to 5 slots arranged in an arc around the flag so tanks
-// don't spawn directly on top of the flag or each other.
-// Red spawns are shifted slightly south of the flag; blue slightly north.
-const SPAWN_OFFSETS = [
-  { x: 0, y: 0 },     // slot 0: directly above/below flag
-  { x: -60, y: 0 },   // slot 1: left
-  { x: 60, y: 0 },    // slot 2: right
-  { x: -30, y: 30 },  // slot 3: lower-left
-  { x: 30, y: 30 },   // slot 4: lower-right
-];
-
-function buildSpawnSlots(
-  baseX: number,
-  baseY: number,
-  yDirection: number, // +1 for red (push spawns south of flag), -1 for blue (push spawns north)
-) {
-  // Start SPAWN_DISTANCE_FROM_FLAG px away from the flag in the team's "back" direction
-  const spawnBaseY = baseY + SPAWN_DISTANCE_FROM_FLAG * yDirection;
-  return SPAWN_OFFSETS.map(off => ({
-    x: baseX + off.x,
-    y: spawnBaseY + off.y * yDirection,
-  }));
-}
-
-export const SPAWN_POSITIONS = {
-  red: buildSpawnSlots(ARENA_WIDTH / 2, FLAG_BASE_INSET, 1),
-  blue: buildSpawnSlots(ARENA_WIDTH / 2, ARENA_HEIGHT - FLAG_BASE_INSET, -1),
-};
-
-// Respawn positions — two corners per team, sourced from the active map.
-// On death, the server randomly picks one of these for the destroyed tank.
+// Spawn / respawn positions — sourced from the active map definition.
+// Used for ALL spawn scenarios: initial game start, post-score reset, and post-death respawn.
+// Each team has two positions (left/right corners on their side); slot index picks which one.
 export const RESPAWN_POSITIONS = {
   red: ACTIVE_MAP.redRespawnPositions,
   blue: ACTIVE_MAP.blueRespawnPositions,
