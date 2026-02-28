@@ -6,6 +6,7 @@ import { InputManager } from '../input/InputManager.js';
 import { TankSprite } from '../entities/TankSprite.js';
 import { ProjectileSprite } from '../entities/ProjectileSprite.js';
 import { FlagSprite } from '../entities/FlagSprite.js';
+import { CAMERA_LERP, CAMERA_DEADZONE_WIDTH, CAMERA_DEADZONE_HEIGHT } from '../constants.js';
 
 // Warm paper / pencil-box palette
 const COLOR_GRID = 0xc8bfaa;
@@ -25,6 +26,7 @@ export class GameScene extends Phaser.Scene {
   private flagSprites = new Map<string, FlagSprite>();
   private inputTimer = 0;
   private localAlive = true;
+  private cameraTarget: Phaser.GameObjects.Rectangle | null = null;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -36,6 +38,11 @@ export class GameScene extends Phaser.Scene {
     this.inputManager = new InputManager(this);
 
     this.drawArena();
+
+    // Camera world bounds — arena is larger than the viewport so the camera
+    // follows the local player's tank within these limits.
+    this.cameras.main.setBounds(0, 0, ARENA_WIDTH, ARENA_HEIGHT);
+    this.physics.world.setBounds(0, 0, ARENA_WIDTH, ARENA_HEIGHT);
 
     // Create flag sprites
     this.flagSprites.set('red', new FlagSprite(this, 'red'));
@@ -170,12 +177,22 @@ export class GameScene extends Phaser.Scene {
         this.tankSprites.set(id, sprite);
       }
 
-      // Track local player alive state for respawn overlay
+      // Track local player alive state for respawn overlay + camera follow
       if (id === localId) {
         if (!this.localAlive && tankState.alive) {
           this.hudManager.setRespawnVisible(false);
         }
         this.localAlive = tankState.alive;
+
+        // Camera follows the local player's interpolated tank position
+        const tank = this.tankSprites.get(id)!;
+        if (this.cameraTarget === null) {
+          this.cameraTarget = this.add.rectangle(tank.x, tank.y, 1, 1, 0x000000, 0);
+          this.cameras.main.startFollow(this.cameraTarget, true, CAMERA_LERP, CAMERA_LERP);
+          this.cameras.main.setDeadzone(CAMERA_DEADZONE_WIDTH, CAMERA_DEADZONE_HEIGHT);
+        } else {
+          this.cameraTarget.setPosition(tank.x, tank.y);
+        }
       }
     }
 

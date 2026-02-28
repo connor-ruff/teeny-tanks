@@ -3,7 +3,7 @@
 // Each game board file is self-contained — walls, name, and any future map properties.
 //
 // Available maps:
-//   gameBoard1  →  GAME_BOARD_1  (two flag barriers, open midfield)
+//   ClassicSimpleBoard  →  GAME_BOARD  (two flag barriers, open midfield)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export { GAME_BOARD_1 as ACTIVE_MAP } from './gameBoard1.js';
+export { GAME_BOARD as ACTIVE_MAP } from './ClassicSimpleBoard.js';

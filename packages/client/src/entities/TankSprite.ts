@@ -312,6 +312,14 @@ export class TankSprite {
     this.drawFlagIndicator(state);
   }
 
+  get x(): number {
+    return this.bodyGraphics.x;
+  }
+
+  get y(): number {
+    return this.bodyGraphics.y;
+  }
+
   syncTo(state: TankState): void {
     this.targetX = state.x;
     this.targetY = state.y;

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ARENA_WIDTH, ARENA_HEIGHT } from '@teeny-tanks/shared';
+import { VIEWPORT_WIDTH, VIEWPORT_HEIGHT } from './constants.js';
 import { BootScene } from './scenes/BootScene.js';
 import { GameScene } from './scenes/GameScene.js';
 import { RoomScreen } from './ui/RoomScreen.js';
@@ -89,8 +89,8 @@ socketManager.onGameOver((data) => {
 // Phaser game config
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
-  width: ARENA_WIDTH,
-  height: ARENA_HEIGHT,
+  width: VIEWPORT_WIDTH,
+  height: VIEWPORT_HEIGHT,
   backgroundColor: '#ede4d3',
   parent: document.body,
   scene: [BootScene, GameScene],

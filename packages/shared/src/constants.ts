@@ -14,13 +14,13 @@ export const TANK_REVERSE_MULTIPLIER = 0.8; // reverse is slower than forward (f
 export const TANK_ROTATION_SPEED = 1.8; // radians per second
 export const TANK_WIDTH = 35;
 export const TANK_HEIGHT = 26;
-export const TANK_SHOOT_COOLDOWN = 500; // ms
+export const TANK_SHOOT_COOLDOWN = 1250; // ms
 export const TANK_COLLISION_RADIUS = 17; // circular approximation for tank-to-tank collision
 export const TANK_PUSH_FACTOR = 0.35;   // fraction of overlap transferred to dragged tank
 export const TANK_RESPAWN_DELAY = 3500; // ms — cooldown before destroyed tank reappears
 
 // Projectile
-export const PROJECTILE_SPEED = 250; // pixels per second
+export const PROJECTILE_SPEED = 180; // pixels per second
 export const PROJECTILE_RADIUS = 4;
 export const PROJECTILE_LIFETIME = 2500; // ms
 export const PROJECTILE_SPAWN_OFFSET = 5; // px — extra gap between tank edge and spawned bullet

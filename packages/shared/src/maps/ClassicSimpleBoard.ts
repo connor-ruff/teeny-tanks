@@ -1,8 +1,8 @@
 import type { MapDefinition } from './types.js';
 
 
-export const GAME_BOARD_1: MapDefinition = {
-  name: 'Game Board 1',
+export const GAME_BOARD: MapDefinition = {
+  name: 'Classic Simple Board',
   width: 500,
   height: 850,
 
@@ -42,4 +42,11 @@ export const GAME_BOARD_1: MapDefinition = {
     { x: 83, y: 810 },  // bottom-left corner
     { x: 417, y: 810 }, // bottom-right corner
   ],
+
+  // Viewport & camera
+  viewportWidth: 500,
+  viewportHeight: 700,
+  cameraLerp: 0.1,
+  cameraDeadzoneWidth: 60,
+  cameraDeadzoneHeight: 60,
 };
