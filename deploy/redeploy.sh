@@ -32,8 +32,12 @@ npm install
 
 # ── 3. Build all packages ─────────────────────────────────────────────────────
 # Order: shared -> server -> client  (defined in root package.json)
+# Increase Node heap to avoid OOM crashes during Vite/Rollup bundling on
+# memory-constrained instances (e.g. 512 MB / 1 GB Lightsail).
 echo "--> Building (shared → server → client)..."
+export NODE_OPTIONS="--max-old-space-size=1024"
 npm run build
+unset NODE_OPTIONS
 
 # ── 4. Reload the game server ─────────────────────────────────────────────────
 # pm2 reload performs a graceful zero-downtime restart: the old process stays
