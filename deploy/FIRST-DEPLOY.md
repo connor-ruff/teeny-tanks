@@ -188,52 +188,11 @@ pm2 logs teeny-tanks --lines 20
 
 ## Step 12 — Configure nginx
 
-Remove the default nginx config and create one for Teeny Tanks:
+Remove the default nginx config and copy the one from this repo:
 
 ```bash
 sudo rm /etc/nginx/sites-enabled/default
-sudo nano /etc/nginx/sites-available/teeny-tanks
-```
-
-Paste the following, then save and exit (Ctrl+O, Enter, Ctrl+X):
-
-```
-server {
-    listen 80;
-    server_name _;
-
-    # Enable gzip compression — big win for the ~1.5 MB JS bundle
-    gzip on;
-    gzip_types text/plain text/css application/json application/javascript text/xml;
-    gzip_min_length 256;
-
-    # Cache static assets (JS/CSS have content hashes from Vite, safe to cache long)
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff2?)$ {
-        root /home/ubuntu/teeny-tanks/packages/client/dist;
-        expires 7d;
-        add_header Cache-Control "public, immutable";
-    }
-
-    # Serve the compiled Vite client bundle
-    root /home/ubuntu/teeny-tanks/packages/client/dist;
-    index index.html;
-
-    # Proxy WebSocket connections to the Node.js game server
-    location /socket.io/ {
-        proxy_pass http://localhost:3001;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_cache_bypass $http_upgrade;
-    }
-
-    # Serve the single-page app for all other routes
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-}
+sudo cp ~/teeny-tanks/deploy/nginx.conf /etc/nginx/sites-available/teeny-tanks
 ```
 
 Enable the config, test it, and reload nginx:
@@ -244,6 +203,10 @@ sudo nginx -t
 # Should print: syntax is ok / test is successful
 sudo systemctl reload nginx
 ```
+
+> **Note:** If you later run `certbot --nginx` (Step 14), Certbot will modify this file
+> to add SSL directives. The canonical version of the nginx config going forward is
+> `deploy/nginx.conf` in this repo — keep it in sync with any manual server changes.
 
 ---
 
@@ -287,7 +250,10 @@ sudo certbot --nginx -d yourdomain.com
 ```
 
 Certbot will automatically update your nginx config to redirect HTTP → HTTPS and reload
-nginx. It also installs a cron job that renews the certificate before it expires.
+nginx (changing `listen 80` to `listen 443 ssl` and adding certificate paths). It also
+installs a cron job that renews the certificate before it expires. Do not overwrite
+these changes — when updating the nginx config in the future, only add/modify specific
+blocks rather than replacing the whole file.
 
 ---
 
