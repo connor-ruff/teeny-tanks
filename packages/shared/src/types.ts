@@ -98,6 +98,7 @@ export interface RoomInfo {
 // Lobby system — represents a player in the pre-game lobby
 export interface LobbyPlayer {
   id: string;
+  userId: number;
   displayName: string;
   team: Team | null; // null means unassigned
 }
@@ -110,10 +111,17 @@ export interface LobbyState {
   scoreLimit: number; // configurable win threshold (1–20), set by host
 }
 
+// Socket.IO socket.data shape (set by auth middleware on the server)
+export interface SocketData {
+  userId: number;
+  username: string;
+  displayName: string;
+}
+
 // Socket.IO typed events
 export interface ClientToServerEvents {
-  createRoom: (data: { displayName: string }) => void;
-  joinRoom: (data: { code: string; displayName: string }) => void;
+  createRoom: () => void;
+  joinRoom: (data: { code: string }) => void;
   /** Host assigns a player to a team (or null to unassign) */
   assignTeam: (data: { targetPlayerId: string; team: Team | null }) => void;
   /** Host sets the score limit (valid range: 1–20) */

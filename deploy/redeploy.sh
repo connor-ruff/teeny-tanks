@@ -19,6 +19,14 @@ echo "  Teeny Tanks — Redeploying"
 echo "========================================"
 echo ""
 
+# ── 0. Sanity check: JWT_SECRET must be set ─────────────────────────────────
+if [ -z "${JWT_SECRET:-}" ]; then
+  echo "WARNING: JWT_SECRET is not set in this shell session."
+  echo "The server will fall back to an insecure dev secret."
+  echo "Run this to fix:  source ~/.bashrc"
+  echo ""
+fi
+
 # ── 1. Pull latest changes ────────────────────────────────────────────────────
 echo "--> Pulling latest changes from origin/main..."
 cd "$APP_DIR"
@@ -40,11 +48,10 @@ npm run build
 unset NODE_OPTIONS
 
 # ── 4. Reload the game server ─────────────────────────────────────────────────
-# pm2 reload performs a graceful zero-downtime restart: the old process stays
-# alive until the new one is ready, so in-progress games are dropped gracefully
-# rather than abruptly.
+# pm2 reload performs a graceful zero-downtime restart using the ecosystem file.
+# --update-env picks up any environment variable changes (e.g. JWT_SECRET).
 echo "--> Reloading game server via PM2..."
-pm2 reload teeny-tanks --update-env
+pm2 reload ecosystem.config.cjs --update-env
 
 echo ""
 echo "========================================"

@@ -8,6 +8,7 @@ import {
   LobbyState,
   ClientToServerEvents,
   ServerToClientEvents,
+  SocketData,
   TICK_INTERVAL,
   SCORE_LIMIT_DEFAULT,
   SCORE_LIMIT_MIN,
@@ -20,7 +21,7 @@ import { updateProjectiles } from './systems/ProjectileSystem.js';
 import { updateFlags } from './systems/FlagSystem.js';
 import { resolveCollisions } from './systems/CollisionSystem.js';
 
-type TypedSocket = Socket<ClientToServerEvents, ServerToClientEvents>;
+type TypedSocket = Socket<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
 
 /**
  * A single game room with its own isolated state, game loop, and player set.
@@ -49,7 +50,7 @@ export class GameRoom {
   private scoreLimit: number = SCORE_LIMIT_DEFAULT;
 
   constructor(
-    private io: Server<ClientToServerEvents, ServerToClientEvents>,
+    private io: Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>,
     public readonly roomCode: string,
   ) {
     this.state = {
@@ -76,9 +77,10 @@ export class GameRoom {
    * Add a player to the lobby phase. The first player to join becomes the host.
    * Does NOT start the game loop -- the host must explicitly start the game.
    */
-  addPlayer(socket: TypedSocket, displayName: string): void {
+  addPlayer(socket: TypedSocket, userId: number, displayName: string): void {
     const player: LobbyPlayer = {
       id: socket.id,
+      userId,
       displayName,
       team: null, // unassigned until the host sets it
     };

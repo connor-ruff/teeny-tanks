@@ -1,8 +1,8 @@
 import { Server, Socket } from 'socket.io';
-import { ClientToServerEvents, ServerToClientEvents } from '@teeny-tanks/shared';
+import { ClientToServerEvents, ServerToClientEvents, SocketData } from '@teeny-tanks/shared';
 import { GameRoom } from './GameRoom.js';
 
-type TypedSocket = Socket<ClientToServerEvents, ServerToClientEvents>;
+type TypedSocket = Socket<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
 
 const ROOM_CODE_LENGTH = 4;
 const ROOM_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // Omit I and O to avoid confusion with 1 and 0
@@ -17,7 +17,7 @@ export class RoomManager {
   /** Track which room each socket is in for fast lookup on disconnect */
   private socketToRoom = new Map<string, string>();
 
-  constructor(private io: Server<ClientToServerEvents, ServerToClientEvents>) {}
+  constructor(private io: Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>) {}
 
   /**
    * Generate a unique 4-character room code.
@@ -36,9 +36,10 @@ export class RoomManager {
 
   /**
    * Handle a new socket connection. Sets up room-related event listeners.
+   * Display name and userId come from socket.data (set by auth middleware).
    */
   handleConnection(socket: TypedSocket): void {
-    socket.on('createRoom', ({ displayName }) => {
+    socket.on('createRoom', () => {
       // Prevent joining multiple rooms
       if (this.socketToRoom.has(socket.id)) {
         socket.emit('roomError', { message: 'You are already in a room.' });
@@ -51,14 +52,14 @@ export class RoomManager {
 
       // The creator joins the lobby (and becomes host). Game loop is NOT started
       // until the host explicitly starts it via the startGame event.
-      room.addPlayer(socket, displayName);
+      room.addPlayer(socket, socket.data.userId, socket.data.displayName);
       this.socketToRoom.set(socket.id, code);
 
       socket.emit('roomCreated', { code });
-      console.log(`Room ${code} created by "${displayName}" (${this.rooms.size} active rooms)`);
+      console.log(`Room ${code} created by "${socket.data.displayName}" (${this.rooms.size} active rooms)`);
     });
 
-    socket.on('joinRoom', ({ code, displayName }) => {
+    socket.on('joinRoom', ({ code }) => {
       // Prevent joining multiple rooms
       if (this.socketToRoom.has(socket.id)) {
         socket.emit('roomError', { message: 'You are already in a room.' });
@@ -74,7 +75,7 @@ export class RoomManager {
         return;
       }
 
-      room.addPlayer(socket, displayName);
+      room.addPlayer(socket, socket.data.userId, socket.data.displayName);
       this.socketToRoom.set(socket.id, normalizedCode);
 
       socket.emit('roomJoined', { code: normalizedCode });

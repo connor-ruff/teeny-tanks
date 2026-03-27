@@ -6,99 +6,117 @@ import { RoomScreen } from './ui/RoomScreen.js';
 import { LobbyManager } from './ui/LobbyManager.js';
 import { HudManager } from './ui/HudManager.js';
 import { SocketManager } from './network/SocketManager.js';
+import { ApiClient } from './network/ApiClient.js';
+import { AuthScreen } from './ui/AuthScreen.js';
 
-// Create shared managers
-const socketManager = new SocketManager();
+// Create API client and auth screen
+const apiClient = new ApiClient();
+const authScreen = new AuthScreen(apiClient);
 const roomScreen = new RoomScreen();
 const lobbyManager = new LobbyManager();
 const hudManager = new HudManager();
 
-// ── Room screen flow ──
-// Player enters a display name, then creates or joins a room.
+// SocketManager is created after authentication succeeds
+let socketManager: SocketManager | null = null;
 
-roomScreen.onCreate = (displayName: string) => {
-  socketManager.createRoom(displayName);
-};
+function initSocketManager(token: string): void {
+  socketManager = new SocketManager(token);
 
-roomScreen.onJoin = (code: string, displayName: string) => {
-  socketManager.joinRoom(code, displayName);
-};
+  // ── Room screen flow ──
+  roomScreen.onCreate = () => {
+    socketManager!.createRoom();
+  };
 
-// When a room is successfully created, transition to the lobby
-socketManager.onRoomCreated((data) => {
+  roomScreen.onJoin = (code: string) => {
+    socketManager!.joinRoom(code);
+  };
+
+  // When a room is successfully created, transition to the lobby
+  socketManager.onRoomCreated((data) => {
+    roomScreen.hide();
+    lobbyManager.setLocalPlayerId(socketManager!.playerId!);
+    lobbyManager.setRoomCode(data.code);
+    lobbyManager.show();
+
+    // The server broadcasts lobbyUpdate BEFORE emitting roomCreated (inside
+    // addPlayer), so the first lobbyUpdate may have arrived when localPlayerId
+    // was still null — causing isHost to evaluate as false. Replay the cached
+    // lobby state now that the player ID is set so the host UI renders correctly.
+    if (socketManager!.latestLobbyState) {
+      lobbyManager.updateLobby(socketManager!.latestLobbyState);
+    }
+  });
+
+  // When successfully joined an existing room, transition to the lobby
+  socketManager.onRoomJoined((data) => {
+    roomScreen.hide();
+    lobbyManager.setLocalPlayerId(socketManager!.playerId!);
+    lobbyManager.setRoomCode(data.code);
+    lobbyManager.show();
+
+    // Same replay logic as roomCreated
+    if (socketManager!.latestLobbyState) {
+      lobbyManager.updateLobby(socketManager!.latestLobbyState);
+    }
+  });
+
+  // Show errors on the room screen (e.g. invalid room code)
+  socketManager.onRoomError((data) => {
+    roomScreen.showError(data.message);
+  });
+
+  // ── Lobby phase ──
+  socketManager.onLobbyUpdate((state) => {
+    lobbyManager.updateLobby(state);
+  });
+
+  lobbyManager.onAssignTeam = (targetPlayerId, team) => {
+    socketManager!.assignTeam(targetPlayerId, team);
+  };
+
+  lobbyManager.onStartGame = () => {
+    socketManager!.startGame();
+  };
+
+  lobbyManager.onSetScoreLimit = (scoreLimit: number) => {
+    socketManager!.setScoreLimit(scoreLimit);
+  };
+
+  // ── Lobby -> game transition ──
+  socketManager.onGameStarted(() => {
+    hudManager.setScoreLimit(lobbyManager.getScoreLimit());
+    lobbyManager.transitionToGame();
+    hudManager.show();
+  });
+
+  socketManager.onAssignment((_data) => {
+    // The assignment is stored on socketManager.team
+  });
+
+  // Show victory screen when a team reaches the score limit
+  socketManager.onGameOver((data) => {
+    hudManager.showGameOver(data.winner, data.scores);
+  });
+
+  // Pass to Phaser registry
+  game.registry.set('socketManager', socketManager);
+}
+
+// ── Logout handling ──
+roomScreen.onLogout = () => {
+  apiClient.logout();
+  authScreen.show();
   roomScreen.hide();
-  lobbyManager.setLocalPlayerId(socketManager.playerId!);
-  lobbyManager.setRoomCode(data.code);
-  lobbyManager.show();
-
-  // The server broadcasts lobbyUpdate BEFORE emitting roomCreated (inside
-  // addPlayer), so the first lobbyUpdate may have arrived when localPlayerId
-  // was still null — causing isHost to evaluate as false. Replay the cached
-  // lobby state now that the player ID is set so the host UI renders correctly.
-  if (socketManager.latestLobbyState) {
-    lobbyManager.updateLobby(socketManager.latestLobbyState);
-  }
-});
-
-// When successfully joined an existing room, transition to the lobby
-socketManager.onRoomJoined((data) => {
-  roomScreen.hide();
-  lobbyManager.setLocalPlayerId(socketManager.playerId!);
-  lobbyManager.setRoomCode(data.code);
-  lobbyManager.show();
-
-  // Same replay logic as roomCreated — the lobbyUpdate for the join may have
-  // arrived before playerId was set, so re-render to pick up correct state.
-  if (socketManager.latestLobbyState) {
-    lobbyManager.updateLobby(socketManager.latestLobbyState);
-  }
-});
-
-// Show errors on the room screen (e.g. invalid room code)
-socketManager.onRoomError((data) => {
-  roomScreen.showError(data.message);
-});
-
-// ── Lobby phase ──
-// Server broadcasts lobby state; lobby manager renders it.
-// Host can assign teams and start the game.
-
-socketManager.onLobbyUpdate((state) => {
-  lobbyManager.updateLobby(state);
-});
-
-lobbyManager.onAssignTeam = (targetPlayerId, team) => {
-  socketManager.assignTeam(targetPlayerId, team);
 };
 
-lobbyManager.onStartGame = () => {
-  socketManager.startGame();
+// ── Auth flow ──
+authScreen.onAuthenticated = () => {
+  authScreen.hide();
+  const user = apiClient.getUser()!;
+  roomScreen.setDisplayName(user.displayName);
+  roomScreen.show();
+  initSocketManager(apiClient.getToken()!);
 };
-
-lobbyManager.onSetScoreLimit = (scoreLimit: number) => {
-  socketManager.setScoreLimit(scoreLimit);
-};
-
-// ── Lobby -> game transition ──
-// The server emits 'gameStarted' when the host clicks start.
-
-socketManager.onGameStarted(() => {
-  // Pass the lobby-configured score limit to the HUD before showing it
-  hudManager.setScoreLimit(lobbyManager.getScoreLimit());
-  lobbyManager.transitionToGame();
-  hudManager.show();
-});
-
-// Handle server assignment (team assignment arrives just before gameStarted)
-socketManager.onAssignment((_data) => {
-  // The assignment is stored on socketManager.team — no lobby UI update needed
-  // since the lobby is about to close.
-});
-
-// Show victory screen when a team reaches the score limit
-socketManager.onGameOver((data) => {
-  hudManager.showGameOver(data.winner, data.scores);
-});
 
 // Phaser game config
 const config: Phaser.Types.Core.GameConfig = {
@@ -120,6 +138,26 @@ const config: Phaser.Types.Core.GameConfig = {
 const game = new Phaser.Game(config);
 
 // Pass shared managers to scenes via Phaser's registry
-game.registry.set('socketManager', socketManager);
 game.registry.set('hudManager', hudManager);
 game.registry.set('lobbyManager', lobbyManager);
+
+// Check for existing session on load
+async function checkSession(): Promise<void> {
+  if (apiClient.isLoggedIn()) {
+    const valid = await apiClient.validateSession();
+    if (valid) {
+      // Skip auth screen — go straight to room screen
+      authScreen.hide();
+      const user = apiClient.getUser()!;
+      roomScreen.setDisplayName(user.displayName);
+      roomScreen.show();
+      initSocketManager(apiClient.getToken()!);
+      return;
+    }
+  }
+  // No valid session — show auth screen, hide room screen
+  roomScreen.hide();
+  authScreen.show();
+}
+
+checkSession();

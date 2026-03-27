@@ -3,7 +3,7 @@ import {
   ClientToServerEvents,
   ServerToClientEvents,
   PlayerInput,
-  GameStateWireWire,
+  GameStateWire,
   Team,
   LobbyState,
 } from '@teeny-tanks/shared';
@@ -12,8 +12,7 @@ type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
 /**
  * Manages the Socket.IO connection and room lifecycle.
- * The socket connects on construction, but the player does not enter a game room
- * until they explicitly create or join one.
+ * Requires a JWT token for authentication — the server rejects unauthenticated connections.
  */
 export class SocketManager {
   private socket: TypedSocket;
@@ -36,10 +35,13 @@ export class SocketManager {
   /** Most recent lobby state — cached so late subscribers (e.g. after roomCreated) can replay it */
   public latestLobbyState: LobbyState | null = null;
 
-  constructor() {
+  constructor(token: string) {
     // Connect to the current page origin so this works in both dev (Vite proxy)
     // and production (nginx proxy). No hardcoded host/port needed.
-    this.socket = io({ transports: ['websocket'] });
+    this.socket = io({
+      transports: ['websocket'],
+      auth: { token },
+    });
 
     // Room events
     this.socket.on('roomCreated', (data) => {
@@ -102,12 +104,12 @@ export class SocketManager {
 
   // ── Room actions ──
 
-  createRoom(displayName: string): void {
-    this.socket.emit('createRoom', { displayName });
+  createRoom(): void {
+    this.socket.emit('createRoom');
   }
 
-  joinRoom(code: string, displayName: string): void {
-    this.socket.emit('joinRoom', { code, displayName });
+  joinRoom(code: string): void {
+    this.socket.emit('joinRoom', { code });
   }
 
   // ── Lobby actions ──

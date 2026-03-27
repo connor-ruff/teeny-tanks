@@ -494,6 +494,163 @@
       to { transform: rotate(360deg); }
     }
 
+    /* -- Auth screen -- */
+    #auth-screen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 300;
+      background: var(--bg-page);
+      transition: opacity var(--transition-slow);
+    }
+
+    #auth-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .auth-card {
+      background: var(--bg-card);
+      border: 3px solid var(--border-dark);
+      border-radius: var(--radius-md);
+      padding: var(--space-xl) var(--space-xxl);
+      min-width: 400px;
+      max-width: 460px;
+      box-shadow: var(--shadow-card);
+      text-align: center;
+    }
+
+    .auth-input {
+      width: 100%;
+      padding: var(--space-sm) var(--space-md);
+      border: 3px solid var(--border-dark);
+      border-radius: var(--radius-md);
+      background: #fff;
+      color: var(--text-primary);
+      font-family: var(--font-main);
+      font-size: var(--font-size-md);
+      outline: none;
+      transition: border-color var(--transition-fast);
+      margin-bottom: var(--space-md);
+    }
+
+    .auth-input::placeholder {
+      color: var(--text-dim);
+    }
+
+    .auth-input:focus {
+      border-color: var(--accent-yellow);
+    }
+
+    .auth-label {
+      font-size: var(--font-size-xs);
+      font-weight: 700;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: var(--space-xs);
+      text-align: left;
+      display: block;
+    }
+
+    .auth-submit-btn {
+      width: 100%;
+      padding: var(--space-md) var(--space-lg);
+      border: 3px solid var(--accent-green);
+      border-radius: var(--radius-md);
+      background: #d6e4c8;
+      color: var(--accent-green);
+      font-family: var(--font-display);
+      font-size: var(--font-size-lg);
+      font-weight: 400;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      box-shadow: var(--shadow-button);
+      margin-top: var(--space-sm);
+    }
+
+    .auth-submit-btn:hover {
+      background: #c8d9b6;
+      transform: translate(-1px, -1px);
+      box-shadow: 3px 3px 0 rgba(44, 44, 44, 0.3);
+    }
+
+    .auth-submit-btn:active {
+      transform: translate(1px, 1px);
+      box-shadow: 1px 1px 0 rgba(44, 44, 44, 0.3);
+    }
+
+    .auth-submit-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .auth-error {
+      color: var(--danger);
+      font-size: var(--font-size-sm);
+      margin-top: var(--space-sm);
+      min-height: 1.4em;
+    }
+
+    .auth-toggle {
+      margin-top: var(--space-md);
+      font-size: var(--font-size-sm);
+      color: var(--text-secondary);
+    }
+
+    .auth-toggle a {
+      color: var(--blue-team);
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    .auth-toggle a:hover {
+      color: var(--blue-team-dark);
+    }
+
+    /* User label + logout on room screen */
+    .room-user-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-lg);
+      padding: var(--space-sm) var(--space-md);
+      background: var(--bg-inset);
+      border: 2px solid var(--border-mid);
+      border-radius: var(--radius-md);
+    }
+
+    .room-user-label {
+      font-size: var(--font-size-sm);
+      color: var(--text-secondary);
+      font-weight: 700;
+    }
+
+    .room-logout-btn {
+      background: none;
+      border: 2px solid var(--border-mid);
+      border-radius: var(--radius-sm);
+      color: var(--text-dim);
+      font-family: var(--font-main);
+      font-size: var(--font-size-xs);
+      font-weight: 700;
+      padding: 2px 8px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: all var(--transition-fast);
+    }
+
+    .room-logout-btn:hover {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
     /* -- Room selection screen -- */
     #room-screen {
       position: fixed;
@@ -914,23 +1071,48 @@
   </style>
 </head>
 <body>
-  <!-- Room selection screen (shown first) -->
-  <div id="room-screen">
+  <!-- Auth screen (shown first if not logged in) -->
+  <div id="auth-screen" class="hidden">
+    <div class="auth-card">
+      <h1 class="room-title">Teeny Tanks</h1>
+      <p class="room-subtitle">capture the flag</p>
+
+      <!-- Login form (shown by default) -->
+      <div id="auth-login-form">
+        <label class="auth-label" for="login-username">Username</label>
+        <input class="auth-input" id="login-username" type="text" maxlength="20" placeholder="Username" autocomplete="username" spellcheck="false" />
+        <label class="auth-label" for="login-password">Password</label>
+        <input class="auth-input" id="login-password" type="password" maxlength="128" placeholder="Password" autocomplete="current-password" />
+        <button class="auth-submit-btn" id="btn-login">Log In</button>
+        <p class="auth-error" id="login-error"></p>
+        <p class="auth-toggle">Don't have an account? <a id="show-register">Sign up</a></p>
+      </div>
+
+      <!-- Register form (hidden by default) -->
+      <div id="auth-register-form" style="display: none;">
+        <label class="auth-label" for="reg-username">Username</label>
+        <input class="auth-input" id="reg-username" type="text" maxlength="20" placeholder="3-20 chars, letters/numbers/underscores" autocomplete="username" spellcheck="false" />
+        <label class="auth-label" for="reg-password">Password</label>
+        <input class="auth-input" id="reg-password" type="password" maxlength="128" placeholder="6+ characters" autocomplete="new-password" />
+        <label class="auth-label" for="reg-display-name">Display Name</label>
+        <input class="auth-input" id="reg-display-name" type="text" maxlength="16" placeholder="Your in-game name" autocomplete="off" spellcheck="false" />
+        <button class="auth-submit-btn" id="btn-register">Create Account</button>
+        <p class="auth-error" id="reg-error"></p>
+        <p class="auth-toggle">Already have an account? <a id="show-login">Log in</a></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Room selection screen (shown after auth) -->
+  <div id="room-screen" class="hidden">
     <div class="room-card">
       <h1 class="room-title">Teeny Tanks</h1>
       <p class="room-subtitle">capture the flag</p>
 
-      <p class="lobby-section-label">Display Name</p>
-      <input
-        class="room-code-input"
-        id="input-display-name"
-        type="text"
-        maxlength="16"
-        placeholder="Your name"
-        autocomplete="off"
-        spellcheck="false"
-        style="width: 100%; margin-bottom: var(--space-lg); letter-spacing: 1px; text-transform: none;"
-      />
+      <div class="room-user-bar">
+        <span class="room-user-label" id="room-user-label">Playing as ...</span>
+        <button class="room-logout-btn" id="btn-logout">Log Out</button>
+      </div>
 
       <button class="room-create-btn" id="btn-create-room">Create Room</button>
 

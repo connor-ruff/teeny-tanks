@@ -1,5 +1,23 @@
 # Persistent User Data — Implementation Gameplan
 
+## Progress
+
+| Phase | Status | Notes |
+|-------|--------|-------|
+| Phase 1: Database Foundation | ✅ Complete | All tables created via versioned migrations |
+| Phase 2: Auth API (Server) | ✅ Complete | Register, login, JWT, Socket.IO auth middleware |
+| Phase 3: Client Auth UI | ✅ Complete | Auth screen, ApiClient, token flow, room screen updated |
+| Phase 4: Stats Collection | Not started | StatsCollector, GameRoom event hooks, DB flush on game over |
+| Phase 5: Stats & Leaderboard UI | Not started | API endpoints, StatsPanel, LeaderboardPanel |
+
+**First deployment milestone (Phases 1–3)**: Code is complete and builds. Ready for production deploy after setting `JWT_SECRET` env var and updating nginx config on the server.
+
+**One-time production setup needed:**
+1. Set `JWT_SECRET` env var for pm2 (see `deploy/redeploy.sh` comments)
+2. Copy updated `deploy/nginx.conf` to server and reload nginx (adds `/api/` proxy)
+
+---
+
 ## Overview
 
 teeny-tanks is currently fully ephemeral — players enter a display name, get a socket.id, play, and everything is lost on disconnect. There is zero persistence, zero auth, and zero stats tracking. This gameplan adds:
@@ -49,6 +67,7 @@ Understanding the starting point is critical for implementation:
 | Database | SQLite via `better-sqlite3` | File-based, zero infrastructure, zero cost, sub-millisecond reads/writes. Perfect for a small hosting server. |
 | HTTP framework | None — raw Node `http` module | Only ~6 API endpoints needed. Manual routing keeps dependencies minimal. |
 | Stats recording | In-memory during match, flush to DB on game over | Avoids DB writes during the hot 20Hz game loop. Single transaction at match end. |
+| Event granularity | Individual kill and flag events stored alongside aggregate counts | Enables "who killed who" and "who captured/returned the flag" queries without sacrificing summary performance. Aggregates on `match_players` and `users` are denormalized for fast reads. |
 | Incomplete matches | Discarded | If all players disconnect mid-game, no stats are saved. Keeps data clean. |
 | Leaderboards | Computed from indexed columns on `users` table | No separate leaderboard table. `SELECT ... ORDER BY kills DESC LIMIT 20` is fast with indexes. |
 
@@ -56,7 +75,28 @@ Understanding the starting point is critical for implementation:
 
 ## Database Schema
 
-3 tables. The `users` table has denormalized aggregate stats for fast leaderboard queries — these are updated atomically at the end of each match alongside the detailed `match_players` records.
+6 tables. A `schema_version` table tracks which migrations have been applied. The `users` table has denormalized aggregate stats for fast leaderboard queries — these are updated atomically at the end of each match alongside the detailed per-match records. Event tables (`match_kills`, `match_flag_events`) store granular in-game events so we can answer "who killed who" and "who captured/returned which flag".
+
+### Versioned Migrations
+
+The database uses a simple versioned migration system:
+
+- A `schema_version` table holds a single row with the current version number (starts at 0 for a fresh DB).
+- Migrations are numbered sequential functions: `v1`, `v2`, `v3`, etc. Each contains the SQL to move from version N-1 → N.
+- On server startup, `database.ts` reads the current version, then runs every migration above it **in a transaction**. After all pending migrations succeed, the version number is updated.
+- Each migration runs exactly once. There are no rollback/down migrations — if something goes wrong, fix it with a new forward migration.
+- **Migration 1** creates the initial schema (users, matches, match_players, indexes). Future migrations add columns, tables, or indexes as needed.
+
+```sql
+-- Migration version tracking (created before any migrations run)
+CREATE TABLE IF NOT EXISTS schema_version (
+  version INTEGER NOT NULL DEFAULT 0
+);
+-- Seed with version 0 if empty
+INSERT INTO schema_version (version) SELECT 0 WHERE NOT EXISTS (SELECT 1 FROM schema_version);
+```
+
+### Migration 1: Initial Schema
 
 ```sql
 -- Authentication + profile + aggregate stats
@@ -90,7 +130,8 @@ CREATE TABLE matches (
   duration_secs   INTEGER NOT NULL
 );
 
--- Per-player performance in each match (join table)
+-- Per-player participation in each match (who was on which team)
+-- Denormalized kill/death/flag counts kept here for fast match summary lookups
 CREATE TABLE match_players (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
   match_id        INTEGER NOT NULL REFERENCES matches(id),
@@ -102,12 +143,32 @@ CREATE TABLE match_players (
   flags_returned  INTEGER NOT NULL DEFAULT 0
 );
 
+-- Individual kill events (who killed who)
+CREATE TABLE match_kills (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  match_id        INTEGER NOT NULL REFERENCES matches(id),
+  killer_user_id  INTEGER NOT NULL REFERENCES users(id),
+  victim_user_id  INTEGER NOT NULL REFERENCES users(id),
+  occurred_at     TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Individual flag events (pickups and returns)
+CREATE TABLE match_flag_events (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  match_id        INTEGER NOT NULL REFERENCES matches(id),
+  user_id         INTEGER NOT NULL REFERENCES users(id),
+  event_type      TEXT NOT NULL,  -- 'capture' (picked up enemy flag) | 'return' (brought flag to base, scored a point)
+  occurred_at     TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- Indexes for leaderboard queries and match history lookups
 CREATE INDEX idx_users_kills ON users(kills DESC);
 CREATE INDEX idx_users_wins ON users(wins DESC);
 CREATE INDEX idx_users_flags_captured ON users(flags_captured DESC);
 CREATE INDEX idx_match_players_user ON match_players(user_id);
 CREATE INDEX idx_match_players_match ON match_players(match_id);
+CREATE INDEX idx_match_kills_match ON match_kills(match_id);
+CREATE INDEX idx_match_flag_events_match ON match_flag_events(match_id);
 ```
 
 ---
@@ -160,10 +221,10 @@ CREATE INDEX idx_match_players_match ON match_players(match_id);
 
 ```
 db/
-  database.ts          -- Opens SQLite file (data/teeny-tanks.db), runs migrations on startup
-  migrations.ts        -- CREATE TABLE / CREATE INDEX SQL statements
+  database.ts          -- Opens SQLite file (data/teeny-tanks.db), creates schema_version table, runs pending migrations on startup
+  migrations.ts        -- Array of versioned migration functions (v1: initial schema, v2+: future changes). Each is SQL that moves the DB from version N-1 → N.
   UserRepository.ts    -- create, findByUsername, findById, updateStats, getLeaderboard, getProfile
-  MatchRepository.ts   -- createMatch, addMatchPlayer, getMatchesForUser
+  MatchRepository.ts   -- createMatch, addMatchPlayer, addMatchKill, addMatchFlagEvent, getMatchesForUser, getMatchDetail (with kills + flag events)
 auth/
   authRoutes.ts        -- HTTP handlers for POST /api/auth/register, POST /api/auth/login, GET /api/auth/me
   authMiddleware.ts    -- JWT verification function used by both HTTP routes and Socket.IO middleware
@@ -233,7 +294,7 @@ Modify existing types:
 
 - Track `userId` alongside `socket.id` in player data structures
 - Instantiate `StatsCollector` when game phase starts
-- Hook into game events: `ProjectileSystem` kills → `collector.recordKill(userId)` + `collector.recordDeath(userId)`, `FlagSystem` captures → `collector.recordCapture(userId)`
+- Hook into game events: `ProjectileSystem` kills → `collector.recordKill(killerUserId, victimUserId)`, `FlagSystem` pickup → `collector.recordFlagCapture(userId)`, `FlagSystem` return/score → `collector.recordFlagReturn(userId)`
 - On `gameOver` → call `collector.flush()` to write match + update user stats
 
 ### `packages/client/src/main.ts`
@@ -264,18 +325,24 @@ Modify existing types:
 Stats accumulate **in-memory** during a match and are flushed to the database **once** at game over.
 
 ### During the match (memory only, no DB writes)
-- `ProjectileSystem` detects a kill → `GameRoom` calls `collector.recordKill(killerUserId)` and `collector.recordDeath(victimUserId)`
-- `FlagSystem` detects a capture → `GameRoom` calls `collector.recordCapture(userId)`
-- `FlagSystem` detects a return → `GameRoom` calls `collector.recordReturn(userId)`
+- `ProjectileSystem` detects a kill → `GameRoom` calls `collector.recordKill(killerUserId, victimUserId)`
+- `FlagSystem` detects a flag pickup → `GameRoom` calls `collector.recordFlagCapture(userId)`
+- `FlagSystem` detects a flag return (score) → `GameRoom` calls `collector.recordFlagReturn(userId)`
 
-The `StatsCollector` is just a `Map<userId, { kills, deaths, flagsCaptured, flagsReturned }>` — incrementing integers, zero overhead during the hot game loop.
+The `StatsCollector` tracks two things in memory:
+1. **Per-player aggregates**: `Map<userId, { kills, deaths, flagsCaptured, flagsReturned }>` — incrementing integers for fast summary lookups
+2. **Event log**: arrays of `{ killerUserId, victimUserId, timestamp }` and `{ userId, eventType: 'capture' | 'return', timestamp }` — the granular record of what happened
+
+Zero overhead during the hot game loop — just pushing to arrays and incrementing counters.
 
 ### On game over (single SQLite transaction)
 1. `BEGIN TRANSACTION`
 2. INSERT into `matches` → get back `match_id`
-3. For each player: INSERT into `match_players` with their per-match stats
-4. For each player: `UPDATE users SET kills = kills + ?, deaths = deaths + ?, ..., games_played = games_played + 1, wins = wins + (1 if winning team), losses = losses + (1 if losing team)`
-5. `COMMIT`
+3. For each player: INSERT into `match_players` with their per-match aggregate stats
+4. For each kill event: INSERT into `match_kills` (match_id, killer_user_id, victim_user_id, occurred_at)
+5. For each flag event: INSERT into `match_flag_events` (match_id, user_id, event_type, occurred_at)
+6. For each player: `UPDATE users SET kills = kills + ?, deaths = deaths + ?, ..., games_played = games_played + 1, wins = wins + (1 if winning team), losses = losses + (1 if losing team)`
+7. `COMMIT`
 
 This runs synchronously via `better-sqlite3` — atomic and sub-millisecond for this data volume.
 
@@ -288,38 +355,42 @@ If all players disconnect before a winner is determined, no stats are recorded. 
 
 Each phase is independently testable. Complete one before starting the next.
 
-### Phase 1: Database Foundation
+### Phase 1: Database Foundation ✅ COMPLETE
 **Goal**: SQLite database created on server startup with correct schema.
 
-- Install `better-sqlite3` + types in `packages/server`
-- Create `db/migrations.ts` — all CREATE TABLE/INDEX statements
-- Create `db/database.ts` — opens `data/teeny-tanks.db`, runs migrations
-- Create `db/UserRepository.ts` — CRUD operations with prepared statements
-- Create `db/MatchRepository.ts` — match + match_player insert/query operations
-- Add `data/` to `.gitignore`
+- ✅ Install `better-sqlite3` + types in `packages/server`
+- ✅ Create `db/migrations.ts` — versioned migration array; migration 1 contains all initial CREATE TABLE/INDEX statements
+- ✅ Create `db/database.ts` — opens `data/teeny-tanks.db`, creates `schema_version` table, runs any pending migrations in a transaction
+- ✅ Create `db/UserRepository.ts` — CRUD operations with prepared statements
+- ✅ Create `db/MatchRepository.ts` — match + match_player + match_kills + match_flag_events insert/query operations
+- ✅ Add `data/` to `.gitignore`
 - **Verify**: server starts, `data/teeny-tanks.db` exists, tables are correct (`sqlite3 data/teeny-tanks.db ".tables"`)
 
-### Phase 2: Auth API (Server-Side)
+### Phase 2: Auth API (Server-Side) ✅ COMPLETE
 **Goal**: Working registration, login, and JWT-protected Socket.IO connections.
 
-- Install `bcrypt`, `jsonwebtoken` + types in `packages/server`
-- Create `auth/authMiddleware.ts` — JWT verify function
-- Create `auth/authRoutes.ts` — register, login, me handlers
-- Update `index.ts` — add HTTP routing to `createServer()`, add Socket.IO `io.use()` middleware
+- ✅ Install `bcrypt`, `jsonwebtoken` + types in `packages/server`
+- ✅ Create `auth/authMiddleware.ts` — JWT verify function
+- ✅ Create `auth/authRoutes.ts` — register, login, me handlers
+- ✅ Update `index.ts` — add HTTP routing to `createServer()`, add Socket.IO `io.use()` middleware
+- ✅ Update nginx.conf — add `/api/` proxy location for production
+- ✅ Update vite.config.ts — add `/api` proxy for development
 - **Verify**: `curl -X POST localhost:3001/api/auth/register -H 'Content-Type: application/json' -d '{"username":"test","password":"test123","displayName":"Tester"}'` returns a JWT. Socket.IO connection without token is rejected.
 
-### Phase 3: Client Auth UI
+### Phase 3: Client Auth UI ✅ COMPLETE
 **Goal**: Players must log in before accessing the game. Full auth → room → lobby → game flow works.
 
-- Add new shared types to `packages/shared/src/types.ts`
-- Create `packages/client/src/network/ApiClient.ts`
-- Create `packages/client/src/ui/AuthScreen.ts`
-- Add auth screen HTML/CSS to `packages/client/index.html`
-- Update `main.ts` — auth gates everything, SocketManager created after auth
-- Update `SocketManager.ts` — accept token, pass in `auth` option, remove displayName from events
-- Update `RoomScreen.ts` — remove name input, show logged-in user info
-- Update `RoomManager.ts` — read displayName from `socket.data` instead of event payload
-- Modify `ClientToServerEvents` in shared types — remove displayName from createRoom/joinRoom
+- ✅ Add `SocketData` and `userId` to `LobbyPlayer` in `packages/shared/src/types.ts`
+- ✅ Create `packages/client/src/network/ApiClient.ts`
+- ✅ Create `packages/client/src/ui/AuthScreen.ts`
+- ✅ Add auth screen HTML/CSS to `packages/client/index.html`
+- ✅ Update `main.ts` — auth gates everything, SocketManager created after auth
+- ✅ Update `SocketManager.ts` — accept token, pass in `auth` option, remove displayName from events
+- ✅ Update `RoomScreen.ts` — remove name input, show logged-in user info + logout button
+- ✅ Update `RoomManager.ts` — read displayName from `socket.data` instead of event payload
+- ✅ Update `GameRoom.ts` — accept userId in addPlayer, include in LobbyPlayer
+- ✅ Modify `ClientToServerEvents` in shared types — remove displayName from createRoom/joinRoom
+- ✅ `npm run build` succeeds (shared → server → client all compile)
 - **Verify**: register a new account, log in, create room, join room from another browser, play a full game
 
 ### Phase 4: Stats Collection

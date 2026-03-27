@@ -153,11 +153,40 @@ that order. It will take 30-90 seconds. The built client files end up in
 
 ---
 
-## Step 11 — Start the game server with PM2
+## Step 11 — Set up JWT_SECRET and start the game server with PM2
+
+The game server uses JWT tokens for user authentication. It needs a secret key to sign
+them. This secret must be set as an environment variable **before** starting pm2.
+
+### 11a. Generate and persist the JWT secret
+
+```bash
+# Generate a random 32-byte secret
+JWT_SECRET=$(openssl rand -base64 32)
+echo "Your JWT_SECRET: $JWT_SECRET"
+```
+
+Add it to your shell profile so it's available on every login and to pm2 on reboot:
+
+```bash
+echo "" >> ~/.bashrc
+echo "# Teeny Tanks — JWT signing secret for user authentication" >> ~/.bashrc
+echo "export JWT_SECRET=\"$JWT_SECRET\"" >> ~/.bashrc
+source ~/.bashrc
+```
+
+**Save this secret somewhere safe.** If it changes, all existing user sessions become
+invalid and everyone has to log in again. User accounts and data are NOT lost — just
+the active sessions.
+
+### 11b. Start the game server
+
+The project includes a pm2 ecosystem file (`ecosystem.config.cjs`) that defines the
+process configuration. pm2 inherits `JWT_SECRET` from the shell environment.
 
 ```bash
 cd ~/teeny-tanks
-pm2 start packages/server/dist/index.js --name teeny-tanks
+pm2 start ecosystem.config.cjs
 pm2 save
 ```
 
@@ -181,7 +210,8 @@ Verify the server is running:
 pm2 status
 # Should show teeny-tanks with status "online"
 pm2 logs teeny-tanks --lines 20
-# Should show: Teeny Tanks server listening on port 3001
+# Should show: Database initialized at .../data/teeny-tanks.db (version 1)
+# Should show: Teeny Tanks server listening on 127.0.0.1:3001
 ```
 
 ---
@@ -259,8 +289,7 @@ blocks rather than replacing the whole file.
 
 ## Making future updates
 
-See `redeploy.sh` in this folder. Copy it to the instance and run it whenever you have
-pushed new changes to your main branch:
+See `redeploy.sh` in this folder. Run it whenever you have pushed new changes to main:
 
 ```bash
 bash ~/teeny-tanks/deploy/redeploy.sh
@@ -272,3 +301,74 @@ Or make it executable once and run it directly:
 chmod +x ~/teeny-tanks/deploy/redeploy.sh
 ~/teeny-tanks/deploy/redeploy.sh
 ```
+
+---
+
+## Migrating an existing deployment to use auth
+
+If you already have Teeny Tanks running from before user authentication was added, follow
+these one-time steps after pulling the latest code:
+
+### 1. Generate and persist JWT_SECRET
+
+```bash
+JWT_SECRET=$(openssl rand -base64 32)
+echo "" >> ~/.bashrc
+echo "# Teeny Tanks — JWT signing secret for user authentication" >> ~/.bashrc
+echo "export JWT_SECRET=\"$JWT_SECRET\"" >> ~/.bashrc
+source ~/.bashrc
+```
+
+### 2. Switch pm2 to use the ecosystem file
+
+The old setup used `pm2 start packages/server/dist/index.js --name teeny-tanks`. The new
+setup uses an ecosystem file that lives in the project root.
+
+```bash
+cd ~/teeny-tanks
+
+# Remove the old pm2 process
+pm2 delete teeny-tanks
+
+# Start using the ecosystem file (inherits JWT_SECRET from shell)
+pm2 start ecosystem.config.cjs
+pm2 save
+```
+
+### 3. Update the nginx config
+
+The auth system uses HTTP API routes (`/api/auth/register`, `/api/auth/login`, etc.) that
+need to be proxied through nginx to the Node.js server.
+
+```bash
+sudo cp ~/teeny-tanks/deploy/nginx.conf /etc/nginx/sites-available/teenytanks.social
+sudo nginx -t        # verify config is valid
+sudo systemctl reload nginx
+```
+
+**Note:** If Certbot previously modified your nginx config for SSL, check that the copied
+file still has the SSL directives. The repo's `nginx.conf` already includes them, but
+verify with `sudo nginx -t` before reloading.
+
+### 4. Run a normal redeploy
+
+```bash
+bash ~/teeny-tanks/deploy/redeploy.sh
+```
+
+### 5. Verify
+
+```bash
+# Check the server started correctly
+pm2 logs teeny-tanks --lines 20
+# You should see: Database initialized at .../data/teeny-tanks.db (version 1)
+
+# Test the auth API
+curl -s -X POST http://localhost:3001/api/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"testuser","password":"test123","displayName":"Tester"}' | head -c 200
+# Should return JSON with a token and user object
+```
+
+Open the game in a browser. You should see a login/register screen instead of the old
+display name input.
