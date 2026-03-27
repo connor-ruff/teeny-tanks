@@ -341,7 +341,7 @@ The auth system uses HTTP API routes (`/api/auth/register`, `/api/auth/login`, e
 need to be proxied through nginx to the Node.js server.
 
 ```bash
-sudo cp ~/teeny-tanks/deploy/nginx.conf /etc/nginx/sites-available/teenytanks.social
+sudo cp ~/teeny-tanks/deploy/nginx.conf /etc/nginx/sites-available/teeny-tanks
 sudo nginx -t        # verify config is valid
 sudo systemctl reload nginx
 ```
