@@ -19,7 +19,10 @@ const PORT = Number(process.env.PORT) || 3001;
 const HOST = '127.0.0.1';
 
 const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
-  // Route API requests
+  // Route API requests — these must be handled here, before Socket.IO's
+  // listener fires, because Socket.IO will 405 any request it doesn't own.
+  // The createServer callback fires first (before event listeners added by
+  // Socket.IO), so responding here prevents Socket.IO from interfering.
   if (req.url?.startsWith('/api/')) {
     const handled = await handleAuthRoute(req, res);
     if (!handled) {
@@ -29,9 +32,12 @@ const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse
     return;
   }
 
-  // Non-API requests get a simple 200 (Socket.IO handles its own upgrade)
-  res.writeHead(200);
-  res.end('Teeny Tanks server');
+  // Let non-API, non-socket requests fall through — Socket.IO handles /socket.io/
+  // and everything else gets a simple 200.
+  if (!req.url?.startsWith('/socket.io')) {
+    res.writeHead(200);
+    res.end('Teeny Tanks server');
+  }
 });
 
 const io = new Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>(httpServer, {
@@ -81,9 +87,6 @@ httpServer.listen(PORT, HOST, () => {
 });
 
 // Graceful shutdown for pm2 reload / SIGTERM from the OS.
-// Calling io.close() fires the 'disconnect' event for every connected socket,
-// which causes RoomManager to clean up rooms and stop all game loops cleanly
-// before the process exits.
 function shutdown(signal: string): void {
   console.log(`Received ${signal} — shutting down gracefully...`);
   io.close(() => {
@@ -92,7 +95,6 @@ function shutdown(signal: string): void {
       process.exit(0);
     });
   });
-  // Safety valve: force-exit if graceful shutdown stalls (e.g. a hung game loop).
   setTimeout(() => {
     console.error('Graceful shutdown timed out, forcing exit.');
     process.exit(1);
