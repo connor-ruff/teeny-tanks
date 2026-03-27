@@ -90,12 +90,13 @@ export class AuthScreen {
     this.loginBtn.disabled = true;
     try {
       await this.apiClient.login(username, password);
-      if (this.onAuthenticated) this.onAuthenticated();
     } catch (err) {
       this.loginError.textContent = err instanceof Error ? err.message : 'Login failed.';
-    } finally {
       this.loginBtn.disabled = false;
+      return;
     }
+    this.loginBtn.disabled = false;
+    if (this.onAuthenticated) this.onAuthenticated();
   }
 
   private async handleRegister(): Promise<void> {
@@ -112,12 +113,13 @@ export class AuthScreen {
     this.regBtn.disabled = true;
     try {
       await this.apiClient.register(username, password, displayName);
-      if (this.onAuthenticated) this.onAuthenticated();
     } catch (err) {
       this.regError.textContent = err instanceof Error ? err.message : 'Registration failed.';
-    } finally {
       this.regBtn.disabled = false;
+      return;
     }
+    this.regBtn.disabled = false;
+    if (this.onAuthenticated) this.onAuthenticated();
   }
 
   hide(): void {

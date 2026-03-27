@@ -56,28 +56,35 @@ export class ApiClient {
     localStorage.removeItem(USER_KEY);
   }
 
+  private async jsonFetch(url: string, options: RequestInit): Promise<Record<string, unknown>> {
+    const res = await fetch(url, options);
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      throw new Error(`Server error (${res.status}). Please try again.`);
+    }
+    const data = await res.json();
+    if (!res.ok) throw new Error((data as { error?: string }).error || `Request failed (${res.status})`);
+    return data as Record<string, unknown>;
+  }
+
   async register(username: string, password: string, displayName: string): Promise<AuthResponse> {
-    const res = await fetch('/api/auth/register', {
+    const data = await this.jsonFetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password, displayName }),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Registration failed');
-    this.saveAuth(data);
-    return data;
+    this.saveAuth(data as unknown as AuthResponse);
+    return data as unknown as AuthResponse;
   }
 
   async login(username: string, password: string): Promise<AuthResponse> {
-    const res = await fetch('/api/auth/login', {
+    const data = await this.jsonFetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Login failed');
-    this.saveAuth(data);
-    return data;
+    this.saveAuth(data as unknown as AuthResponse);
+    return data as unknown as AuthResponse;
   }
 
   async validateSession(): Promise<boolean> {
