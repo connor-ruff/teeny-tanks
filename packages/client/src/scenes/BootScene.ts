@@ -10,6 +10,7 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.scene.start('GameScene');
+    // GameScene is launched on demand when the game starts (after auth + lobby).
+    // See main.ts socketManager.onGameStarted() handler.
   }
 }

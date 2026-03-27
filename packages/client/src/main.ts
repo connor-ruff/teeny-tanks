@@ -87,6 +87,8 @@ function initSocketManager(token: string): void {
     hudManager.setScoreLimit(lobbyManager.getScoreLimit());
     lobbyManager.transitionToGame();
     hudManager.show();
+    // Launch GameScene now that socketManager is in the registry
+    game.scene.start('GameScene');
   });
 
   socketManager.onAssignment((_data) => {
